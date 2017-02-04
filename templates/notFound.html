@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block head %}
+	<title>404 - Pagina no encontrada</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/404.css') }}"/>
+{% endblock %}
+
+{% block content %}
+	<h1>El contenido que estabas buscando no existe</h1>
+
+	<p> {{ page }} </p>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block head %}
+	<title>Lista de cuentas registradas</title>
+	<link rel="stylesheet" href="/static/css/cuentas.css" />
+	<script src="/static/js/jquery.js"></script>
+{% endblock %}
+
+{% block content %}
+	<header>
+		<h1>Informacion de todas las cuentas registradas</h1>
+		<nav>
+			<a id="logout" href="/logout">Salir de mi cuenta</a>
+			<a id="home" href="/">Pagina principal</a>
+		</nav>
+	</header>
+
+	<section>
+		<article>
+			<form id="opciones" action="" method="GET">
+				<p class="input">
+					<label for="opcion">Ordenar por</label>
+					<select id="opcion" name="opcion">
+						<option value="saldo">Saldo en cuenta</option>
+						<option value="antiguedad">Antiguedad</option>
+					</select>
+				</p>
+				<p class="input">
+					<span>Descendente</span><input name="orden" type="range" min="0" max="1"/><span>Ascendente</span>
+				</p>
+				<input id="boton" type="submit" value="Aceptar"/>
+			</form>
+		</article>
+
+		<article>
+			<table border="1">
+				<thead>
+					<tr>
+						<th colspan="4">Lista de cuentas. Pagina <span id="npagina">1</span></th>
+					</tr>
+					<tr>
+						<th>ID</th>
+						<th>Password</th>
+						<th>Saldo</th>
+						<th>Monedas</th>
+					</tr>
+				</thead>
+				<tbody>
+				{% for cuenta in cuentas %}
+					<tr>
+						<td><a href="/admin/cuentas/{{ cuenta[0] }}"> {{ cuenta[0] }} </a></td>
+						<td> {{ cuenta[1] }} </td>
+						<td> {{ cuenta[2] }} </td>
+						<td> {{ cuenta[3] }} </td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+		<article>
+	</section>
+
+{% endblock %}

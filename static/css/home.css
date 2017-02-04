@@ -1,0 +1,35 @@
+body {
+	background-image: url('../imagenes/pussy02.jpg');
+	background-attachment: fixed;
+	background-size:100vw 100vh;
+}
+
+h1 {
+	font-size: 4em;
+	text-align: center;
+	margin-top: 10px;
+	margin-bottom: 30px;
+}
+
+nav {
+	background-color: #0a0a0a;
+	border-radius:7px;
+	width: 90%;
+	margin: auto;
+	padding: 10px;
+	text-align: center;
+	box-sizing: border-box;
+}
+
+nav a {
+	display: inline-block;
+	width: auto;
+	padding: 10px;
+	margin-top:0;
+	box-sizing: border-box;
+	font-size: 1.5em;
+	font-weight: bold;
+	color: #fff;
+	text-decoration: none;
+}
+

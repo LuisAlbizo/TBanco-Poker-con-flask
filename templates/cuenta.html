@@ -1,0 +1,55 @@
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<link rel="stylesheet" href="/static/css/cuenta.css" type="text/css" media="screen" charset="utf-8">
+	<script src="/static/js/jquery.js"></script>
+	<script src="/static/js/cuenta.js"></script>
+	<script>
+		$(document).ready(function(){
+			var cuenta_data = {{ cuenta.__json__()|tojson|safe }};
+		});
+	</script>
+	<title>Informacion de Cuenta</title>
+</head>
+<body>
+	{% if cuenta %}
+	<h1>Informacion de la cuenta: {{ cuenta.getID() }}</h1>
+	<nav>
+		<a id="logout" href="/logout">Salir de mi cuenta</a>
+		<a id="home" href="/">Pagina principal</a>
+	</nav>
+	<table border="1">
+		<h2>Monedas: {{ cuenta.getSaldo()["monedas"].__len__() }}</h2>
+		<thead>
+			<tr>
+				<th>Valor</th>
+				<th>Expiracion</th>
+				<th>Tiempo activa</th>
+				<th>ID</th>
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<td colspan="4">Saldo: <i>{{cuenta.getSaldo()["valor"]}}</i></td>
+			</tr>
+		</tfoot>
+		<tbody>
+			{% for moneda in cuenta.getSaldo()["monedas"] %}
+			<tr class="moneda">
+				<td>{{moneda.consultarValor()}}</td>
+				<td>{{moneda.consultarExpiracion()}}</td>
+				<td>{{moneda.tiempoActiva()}}</td>
+				<td>{{moneda.getID()}}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% else %}
+	<h1>La cuenta: {{ cuentaID }} no existe</h1>
+	<nav>
+		<a id="logout" href="/logout">Salir de mi cuenta</a>
+		<a id="home" href="/">Pagina principal</a>
+	</nav>
+	{% endif %}
+</body>
+</html>

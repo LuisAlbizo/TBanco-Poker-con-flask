@@ -1,0 +1,91 @@
+body {
+	background-image: url('../imagenes/pussy02.jpg');
+	background-attachment: fixed;
+	background-size:100vw 100vh;
+}
+
+h1 {
+	font-size: 4em;
+	text-align: center;
+	margin-top: 10px;
+	margin-bottom: 30px;
+}
+
+h2 {
+	font-size: 2em;
+	text-align: center;
+}
+
+a {
+	display: inline-block;
+	color: #fff;
+	width:45%;
+	text-align: center
+	font-weight: bold;
+	font-size: 1.5em;
+	text-decoration: none;
+}
+
+nav {
+	border-radius:6px;
+	width: 70%;
+	margin: auto;
+	margin-top: 30px;
+	padding: 20px;
+	background-color: rgba(8,10,8,0.9);
+	text-align: center;
+	box-sizing:border-box;
+}
+
+form {
+	background-color: #151555;
+	color: #fff;
+	padding: 30px;
+	font-size: 1.4em;
+	box-sizing: border-box;
+}
+
+.input {
+	font-size: 1.2em;
+	width:100%;
+	margin-bottom: 20px;
+	padding: 20px;
+	box-sizing: border-box;
+}
+
+
+
+
+table {
+	background-color: rgba(50,50,180,0.4);
+	width: 90%;
+	margin: auto;
+}
+
+thead {
+	background-color: rgba(20,200,20,0.4);
+}
+thead th {
+	font-size: 2em;
+}
+
+td {
+	color:rgb(10,10,30);
+	padding:10px;
+	font-size: 1.7em;
+	font-weight: bolder;
+}
+
+td a {
+	display: inline;
+	color:rgb(10,10,30);
+	padding:10px;
+	font-size: 1.7em;
+	font-weight: bolder;
+}
+
+tfoot td {
+	font-size: 2em;
+	text-align: center;
+}
+

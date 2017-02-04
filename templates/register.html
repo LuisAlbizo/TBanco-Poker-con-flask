@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% from 'macros.html' import render_field %}
+
+{% block head %}
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<link rel="stylesheet" href="{{ url_for('static',filename='css/register.css') }}" type="text/css" media="screen" charset="utf-8">
+	<title>Registro</title>
+{% endblock %}
+
+{% block content %}
+	<h1>Registro</h1>
+	<h3>Si ya tienes una cuenta, entonces <a href="/login">accede con tus datos aqui</a></h3>
+	<form method="POST">	
+		<h2>Registrate</h2>
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+		{{ render_field(form.password,placeholder=form.password.label.text) }}
+		{{ render_field(form.confirm,placeholder=form.confirm.label.text) }}
+		<input id="boton" type="submit" value="Registrarme">
+	</form>
+	<a id="home" href="/">Pagina principal</a>
+{% endblock %}
