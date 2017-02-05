@@ -2,32 +2,46 @@
 {% from 'macros.html' import render_field %}
 
 {% block head %}
+	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1,0">
 	<link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}" />
 	<title>Login</title>
 {% endblock %}
 
 {% block content %}
-	<div class="container">
-		<header class="row">
-			<h1>Accede a tu cuenta</h1>
-			<h3 class="text-right">Si no tienes una cuenta <a href="/register">registrate aqui</a></h3>
-		</header>
+	<header class="container">
+		<h1 class="text-center">Accede a tu cuenta</h1>
+		<h3 class="text-right">Si no tienes una cuenta <a href="/register">registrate aqui</a></h3>
+	</header>
 
+	<section class="container">
 		<form method="POST" action="/login" class="form-horizontal" id="login-form">
-			<h2>Inicia sesion</h2>
+			<h2 class="text-center">Inicia sesion</h2>
 			{% if alert %}
-				<p id="alert">{{ alert }}</p>
+				<p class="text-success">{{alert}}</p>
 			{% endif %}
 			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-			{{ render_field(form.account,placeholder=form.account.label.text,value=account_value) }}
-			{{ render_field(form.password,placeholder=form.password.label.text) }}
-			<input id="boton" type="submit" value="Enviar"/>
+			
+			<div class="form-group">
+				<label for="account" class="col-xs-12 col-md-2 control-label">{{ form.account.label.text }}</label>
+				<div class="col-xs-12 col-md-10"> 
+					{{ render_field(form.account,placeholder=form.account.label.text,value=account_value,class="form-control") }}
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="password" class="col-xs-12 col-md-2 control-label">{{ form.password.label.text }}</label>
+				<div class="col-xs-12 col-md-10">
+					{{ render_field(form.password,placeholder=form.password.label.text,class="form-control") }}
+				</div>
+			</div>
+			<input class="btn btn-primary col-xs-offset-2" id="boton" type="submit" value="Enviar"/>
 		</form>
-		<a class="btn btn-primary center-block" href="/"><span class="glyphicon glyphicon-home"></span> Pagina principal</a>
-	</div>
+	</section>
 
-	<script src="/static/js/jquery.js"></script>
-	<script src="/static/bootstrap/js/bootstrap.min.js"></script>
-
+	<footer>
+		<p class="text-center">
+			<a href="/"><span class="glyphicon glyphicon-home"></span> Pagina principal</a>
+		</p>
+	</footer>
 {% endblock %}

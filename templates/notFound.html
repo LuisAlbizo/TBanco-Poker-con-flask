@@ -1,12 +1,31 @@
 {% extends 'base.html' %}
 
 {% block head %}
+	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1,0">
 	<title>404 - Pagina no encontrada</title>
-	<link rel="stylesheet" href="{{ url_for('static', filename='css/404.css') }}"/>
+	<link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css"/>
+	<style>
+		h1 {
+			margin-bottom:30px;
+		}
+	
+		body {
+			background-color:#000;
+			background-image:url('/static/imagenes/anime_girl01.png');
+			background-attachment:fixed;
+			background-size:100vw 100vh;
+		}
+		
+		h1 {
+			color:#fff;
+		}
+	</style>
 {% endblock %}
 
 {% block content %}
-	<h1>El contenido que estabas buscando no existe</h1>
+	<div class="container">
+		<h1>El contenido que estabas buscando no existe</h1>
 
-	<p> {{ page }} </p>
+		<h3 class="text-center text-danger"> {{ page }} </h3>
+	</div>
 {% endblock %}

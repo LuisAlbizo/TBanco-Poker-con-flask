@@ -5,6 +5,7 @@ import config
 import bank_forms
 import banco
 import pickle
+import math
 
 try:
 	f=open("data/bank.pk","rb")
@@ -27,9 +28,6 @@ finally:
 app = flask.Flask(__name__)
 app.config.from_object(config.MiConfig)
 csrf = flask_wtf.CSRFProtect()
-
-for _ in range(50):
-	bank.crearCuenta("pass")
 
 @app.errorhandler(404)
 def notFound(error):
@@ -77,7 +75,11 @@ def login():
 def profile():
 	if 'account' in flask.session:
 		cuenta=bank.obtenerCuenta(flask.session['account'],flask.session['password'])
-		return flask.render_template("cuenta.html",cuenta=cuenta)
+		return flask.render_template("cuenta.html",
+			cuenta=cuenta['cuenta'],
+			nmonedas=cuenta['monedas'],
+			npages=int(math.ceil(cuenta['monedas']/20))
+		)
 	else:
 		return flask.redirect(flask.url_for("login"))
 
@@ -95,9 +97,9 @@ def logout():
 @app.route("/admin/")
 def admin_main():
 	if 'account' in flask.session:
-		cuenta = bank.obtenerCuenta(flask.session['account'],flask.session['password'])
+		cuenta = bank.obtenerCuenta(flask.session['account'],flask.session['password'])["cuenta"]
 		if cuenta.permisos():
-			return flask.render_template("admin_main.html",permisos=True,cuenta=cuenta)
+			return flask.render_template("admin_main.html",admin=cuenta.getID())
 		else:
 			return flask.redirect(flask.url_for('profile'))
 	else:
@@ -106,7 +108,7 @@ def admin_main():
 @app.route("/admin/cuentas/<cuenta_id>")
 def informacion_cuenta(cuenta_id):
 	if 'account' in flask.session:
-		cuenta = bank.obtenerCuenta(flask.session['account'],flask.session['password'])
+		cuenta = bank.obtenerCuenta(flask.session['account'],flask.session['password'])["cuenta"]
 		if cuenta.permisos():
 			cuenta = bank.obtenerCuenta(cuenta_id,admin=cuenta)
 			if cuenta: 

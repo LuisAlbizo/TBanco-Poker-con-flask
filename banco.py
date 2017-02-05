@@ -26,7 +26,7 @@ class TBanco:
 		if clave==self.__clave_secreta:
 			#Si su clave es igual a la clave del banco le damos permisos a esa cuenta
 			cuenta=TCuentaAdmin(clave,tools.randomString(8))
-			cuenta.__actualizadora = Actualizadora(cuenta,self.__cuentas_db)
+			cuenta._TCuenta__actualizadora = Actualizadora(cuenta,self.__cuentas_db)
 			#... y le agregamos 150 monedas con valores aleatorios dentro de un rango algo alto
 			for _ in range(75):
 				cuenta.agregarMoneda(TMoneda([100,1000,10000][tools.random.randint(0,2)],tools.random.randint(720,2160)))
@@ -34,7 +34,7 @@ class TBanco:
 		else:
 			#Si su clave no es la del banco, creamos una cuenta normal (sin permisos)
 			cuenta=TCuenta(clave,tools.randomString(8))
-			cuenta.__actualizadora = Actualizadora(cuenta,self.__cuentas_db)
+			cuenta._TCuenta__actualizadora = Actualizadora(cuenta,self.__cuentas_db)
 			#... y le agregamos 20 monedas con valor de 100 y duracion de 24 horas
 			for _ in range(20):
 				cuenta.agregarMoneda(TMoneda(100,1440))
@@ -60,17 +60,28 @@ class TBanco:
 
 	def obtenerCuenta(self,ID,clave="_",admin=None):
 		db_accounts=sqlite3.connect("./data/db/"+self.__cuentas_db+".db")
-		cursor=db_accounts.execute("SELECT Account_data,password FROM Accounts WHERE ID='%s'" % ID)
+		cursor=db_accounts.execute("SELECT password FROM 'Accounts' WHERE ID='%s'" % ID)
 		try:
-			cuenta=next(cursor)
+			password=next(cursor)[0]
 			cursor.close()
-			db_accounts.close()
-			if cuenta[1]==clave:
-				cuenta=pickle.loads(base64.b64decode(cuenta[0].encode()))
-				return cuenta
+			if password==clave:
+				info=next(db_accounts.execute("SELECT Account_data, saldo, monedas FROM 'Accounts' WHERE ID='%s'" % ID))
+				db_accounts.close() 
+				cuenta=pickle.loads(base64.b64decode(info[0].encode()))
+				return {
+					"cuenta":cuenta,
+					"saldo":info[1],
+					"monedas":info[2]
+					}
 			elif admin and admin.permisos():
-				cuenta=pickle.loads(base64.b64decode(cuenta[0].encode()))
-				return cuenta
+				info=next(db_accounts.execute("SELECT Account_data, saldo, monedas FROM 'Accounts' WHERE ID='%s'" % ID))
+				db_accounts.close()
+				cuenta=pickle.loads(base64.b64decode(info[0].encode()))
+				return {
+					"cuenta":cuenta,
+					"saldo":info[1],
+					"monedas":info[2]
+					}
 			else:
 				return False
 		except:
@@ -82,7 +93,7 @@ class TBanco:
 		#Verificamos que la cuenta que quiere acceder a esta informacion tenga permisos
 		if admin.permisos():
 			db_accounts=sqlite3.connect("./data/db/"+self.__cuentas_db+".db")
-			cursor=db_accounts.execute("select %s from Accounts" % reduce(lambda a,b:a+","+b,datos))
+			cursor=db_accounts.execute("select %s from 'Accounts'" % reduce(lambda a,b:a+","+b,datos))
 			for _ in range(page-1):
 				for __ in range(pagesize):
 					try:
@@ -106,7 +117,7 @@ class TBanco:
 					last_page=True
 			cursor.close()
 			db_accounts.close()
-			return {"cuentas":cuentas,"page":page,"":2}
+			return {"cuentas":cuentas,"page":page,"last_page":last_page}
 		else:
 			return {"error":True,"error_message":"Permiso denegado"}
 
@@ -121,9 +132,19 @@ class Actualizadora:
 			a_funcion()
 			db_accounts=sqlite3.connect("./data/db/"+self.__db_name+".db")
 			db_accounts.execute(
-				"UPDATE Accounts SET Account_data='%s', Saldo=%i, monedas=%i WHERE ID='%s'" % (
+				"UPDATE Accounts SET Account_data='%s' WHERE ID='%s'" % (
 					base64.b64encode(pickle.dumps(self.__cuenta)).decode(),
+					self.__cuenta.getID()
+				)
+			)
+			db_accounts.execute(
+				"UPDATE Accounts SET Saldo=%i WHERE ID='%s'" % (
 					self.__cuenta.getSaldo("valor"),
+					self.__cuenta.getID()
+				)
+			)
+			db_accounts.execute(
+				"UPDATE Accounts SET monedas=%i WHERE ID='%s'" % (
 					len(self.__cuenta.getSaldo("monedas")),
 					self.__cuenta.getID()
 				)
@@ -170,9 +191,6 @@ class TCuenta:
 		self.__saldo_monedas=[]
 		self.__password=clave
 
-	def __setActualizadora(self,actualizadora):
-		self.__actualizadora=actualizadora
-
 	def getID(self):
 		return self.__id
 
@@ -186,6 +204,11 @@ class TCuenta:
 		else:
 			return {"valor":self.__saldo_valor,"monedas":self.__saldo_monedas}
 
+	def getMoneda(self,ID):
+		for moneda in self.__saldo_monedas:
+			if moneda.getID()==ID:
+				return moneda
+
 	def agregarMoneda(self,moneda):
 		if moneda.consultarValor()>0 and moneda.consultarExpiracion()>0:
 			self.__saldo_monedas.append(moneda)
@@ -195,15 +218,11 @@ class TCuenta:
 			return False
 
 	def actualizarSaldo(self):
-		try:
-			@self.__actualizadora
-			def actualizar():
-				self.__saldo_monedas = list(filter(lambda moneda:moneda.consultarExpiracion()>0,self.__saldo_monedas))
-				self.__saldo_valor = sum([moneda.consultarValor() for moneda in self.__saldo_monedas])
-			actualizar()
-		except:
+		@self.__actualizadora
+		def actualizar():
 			self.__saldo_monedas = list(filter(lambda moneda:moneda.consultarExpiracion()>0,self.__saldo_monedas))
 			self.__saldo_valor = sum([moneda.consultarValor() for moneda in self.__saldo_monedas])
+		actualizar()
 
 	#--rango = tupla (int limite_inferior,int limite_superior) - (si el limite_inferior es mayor que el limite_superior entonces
 	#se retornaran todas las monedas que no esten dentro del rango (limite_superior,limite_inferior))
@@ -258,6 +277,12 @@ class TCuenta:
 		}
 
 class TCuentaAdmin(TCuenta):
+	def __init__(self,clave,ID):
+		self._TCuenta__saldo_valor=0
+		self._TCuenta__id=ID
+		self._TCuenta__saldo_monedas=[]
+		self._TCuenta__password=clave
+
 	def permisos(self):
 		return True
 
