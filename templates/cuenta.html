@@ -4,47 +4,25 @@
 	<meta http-equiv="content-type" content="text/html; charset=utf-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1,0">
 	<link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
+	<link rel="stylesheet" href="/static/css/cuenta.css">
 	<script src="/static/js/jquery.js"></script>
 	<script src="/static/bootstrap/js/bootstrap.min.js"></script>
 	<script src="/static/js/cuenta.js"></script>
-	
-	<style>
-		body {
-			background-image: url("/static/imagenes/qlo_verde.jpg");
-			background-attachment: fixed;
-			background-size: 100vw 100vh;
-			padding-top:50px;
-		}
 
-		header {
-			margin-bottom:30px;
-		}
-
-		ul {
-			list-style:none;
-		}
-
-		li {
-			margin-top:10px;
-		}
-
-		p {
-			margin-top:30px;
-		}
-
-	</style>
-
-	<script>
-		$(document).ready(function(){
-			var cuenta_data = {{ cuenta.__json__()|tojson|safe }};
-		});
-	</script>
-	
 	<title>Informacion de Cuenta</title>
 {% endblock %}
 
 {% block content %}
 	{% if cuenta %}
+	{% if monedas["error"] %}	
+	<header class="container">
+		<div class="row">
+			<div class="bg-danger col-xs-12">
+				<h2>Error: <small>{{monedas["error_message"]}}</small></h2>
+			</div>
+		</div>
+	</header>
+	{% else %}
 	<header class="container">
 		<div class="row">
 			<nav class="col-xs-12 navbar navbar-default navbar-fixed-top">
@@ -76,7 +54,6 @@
 			</nav>
 		</div>
 	</header>
-
 	<section class="container">
 		<article class="table-responsive">
 			<table class="table table-bordered table-hover">
@@ -95,38 +72,39 @@
 					</tr>
 				</tfoot>
 				<tbody>
-					{% for moneda in cuenta.getSaldo()["monedas"] %}
+					{% for moneda in monedas %}
 					<tr class="moneda">
-						<td>{{moneda.consultarValor()}}</td>
-						<td>{{moneda.consultarExpiracion()}}</td>
-						<td>{{moneda.tiempoActiva()}}</td>
-						<td>{{moneda.getID()}}</td>
+						<td>{{ moneda["valor"] }}</td>
+						<td>{{ moneda["expiracion"] }}</td>
+						<td>{{ moneda["tiempo_activa"] }}</td>
+						<td>{{ moneda["ID"] }}</td>
 					</tr>
 					{% endfor %}
 				</tbody>
 			</table>
-
-			<form id="paginas" action="">
-				<div class="input-group">
-					<span class="input-group-btn">
-						<button class="btn btn-primary">
-							<span class="glyphicon glyphicon-chevron-left"></span> Anterior
-						</button>
-					</span>
-					<input type="number" class="form-control" 
-						min="1" 
-						max="{{ npages }}" 
-						value="1">
-					<span class="input-group-btn">
-						<button class="btn btn-primary">
-							Siguiente <span class="glyphicon glyphicon-chevron-right"></span>
-						</button>
-					</span>
-				</div>
-			</form>
-
 		</article>
 	</section>
+
+	<footer class="container">
+		<div class="btn-group btn-group-justified">
+			{% if page==1 %}
+			<a class="btn btn-primary disabled">
+			{% else %}
+			<a class="btn btn-primary" href="{{ page-1 }}">
+			{% endif %}
+				<span class="glyphicon glyphicon-chevron-left"></span> Anterior
+			</a>
+			<a class="btn btn-default disabled text-center">{{ page }} / {{ npages }}</a>
+			{% if last_page %}
+			<a class="btn btn-primary disabled">
+			{% else %}
+			<a class="btn btn-primary" href="{{ page+1 }}">
+			{% endif %}
+				Siguiente <span class="glyphicon glyphicon-chevron-right"></span>
+			</a>
+		</div>
+	</footer>
+	{% endif %}
 	{% else %}
 	<header class"container">
 		<h1>La cuenta: {{ cuentaID }} no existe</h1>

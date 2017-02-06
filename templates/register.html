@@ -5,6 +5,8 @@
 	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1,0">
 	<link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
 	<link rel="stylesheet" href="{{ url_for('static',filename='css/register.css') }}" type="text/css" media="screen" charset="utf-8">
+	<script src="/static/js/jquery.js"></script>
+	<script src="/static/js/register.js"></script>
 	<title>Registro</title>
 {% endblock %}
 
@@ -15,7 +17,7 @@
 	</header>
 
 	<section class="container">
-		<form method="POST" class="form-horizontal">
+		<form method="POST" class="form-horizontal" id="register-form">
 			<h2 class="text-center">Registrate</h2>
 			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 			

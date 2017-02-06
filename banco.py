@@ -92,6 +92,8 @@ class TBanco:
 	def obtenerCuentas(self,admin,datos=["id","password","saldo","monedas"],page=1,pagesize=20):
 		#Verificamos que la cuenta que quiere acceder a esta informacion tenga permisos
 		if admin.permisos():
+			if page<=0:
+				return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
 			db_accounts=sqlite3.connect("./data/db/"+self.__cuentas_db+".db")
 			cursor=db_accounts.execute("select %s from 'Accounts'" % reduce(lambda a,b:a+","+b,datos))
 			for _ in range(page-1):
@@ -99,15 +101,18 @@ class TBanco:
 					try:
 						next(cursor)
 					except:
-						return {"error":True,"error_message":"Pagina "+page+" fuera de rango"}
+						return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
 			cuentas=[]
 			last_page=False
+			to_json=eval("lambda cuenta_cur:{%s}" % reduce(
+					(lambda a,b:a+","+b),
+					[("'%s':cuenta_cur[%i]" % (datos[i],i)) for i in range(len(datos))]
+				)
+			)
 			for _ in range(pagesize):
 				try:
-					cuentas.append(next(cursor))
-				except Exception as e:
-					print e
-					print dir(e)
+					cuentas.append(to_json(next(cursor)))
+				except:
 					last_page=True
 					break
 			if not(last_page):
@@ -117,7 +122,12 @@ class TBanco:
 					last_page=True
 			cursor.close()
 			db_accounts.close()
-			return {"cuentas":cuentas,"page":page,"last_page":last_page}
+			return {
+				"error":False,
+				"cuentas":cuentas,
+				"page":page,
+				"last_page":last_page
+			}
 		else:
 			return {"error":True,"error_message":"Permiso denegado"}
 
@@ -286,13 +296,15 @@ class TCuentaAdmin(TCuenta):
 	def permisos(self):
 		return True
 
+#Funciones de utilidades
+
 #	TCambio, recibe una lista de monedas y segun modo y valor retorna otra lista de monedas
 #monedas:	lista de monedas a cambiar
 #modo:		div o mul, si por el valor que tienen las monedas se obtendran 
 #			menos monedas con mas 'valor' respecto a evaluar o mas monedas con menos valor 
 #evaluar: 	si las monedas que se quieren cambiar se tienen que evaluar por su expiracion o su valor
 def TCambio(monedas,modo,evaluar):
-	new_monedas=monedas
+	new_monedas=[]
 	if modo=="div":
 		if evaluar=="exp":
 			pass
@@ -303,6 +315,30 @@ def TCambio(monedas,modo,evaluar):
 			pass
 		elif evaluar=="val":
 			pass
+	elif modo=="tra":
+		if evaluar=="exp":
+			pass
+		elif evaluar=="val":
+			pass
 	return new_monedas
+
+def paginarMonedas(cuenta,page,pagesize=20):
+	if page<=0:
+		return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
+	elif (page-1)*pagesize>len(cuenta.getSaldo('monedas')):
+		return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
+	else:
+		if (page)*pagesize==len(cuenta.getSaldo('monedas')):
+			return {
+				"error":False,
+				"last_page":True,
+				"monedas":cuenta.getSaldo("monedas")[((page-1)*20):((page)*20)]
+			}
+		else:
+			return {
+				"error":False,
+				"last_page":False,
+				"monedas":cuenta.getSaldo("monedas")[((page-1)*20):((page)*20)]
+			}
 
 #Luis Albizo 2016-12-29

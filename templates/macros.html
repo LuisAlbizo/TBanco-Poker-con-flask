@@ -1,6 +1,6 @@
 {% macro render_field(field) %}
 	{{ field(**kwargs) }}
-	<ul class="errors">
+	<ul id="errors-{{field.name}}">
 	{% for error in field.errors %}
 		<li class="error">{{error}}</li>
 	{% endfor %}

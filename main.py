@@ -23,7 +23,7 @@ except:
 	print "Nuevo TBanco creado"
 finally:
 	del f
-	print "La clave secreta delTBanco es: "+bank.getClaveSecreta()
+	print "La clave secreta del TBanco es: "+bank.getClaveSecreta()
 
 app = flask.Flask(__name__)
 app.config.from_object(config.MiConfig)
@@ -41,25 +41,34 @@ def home():
 
 @app.route("/register",methods=["GET","POST"])
 def register():	
-	register=bank_forms.RegisterForm(flask.request.form)
+	formulario=bank_forms.RegisterForm(flask.request.form)
 	if 'account' in flask.session:
 		return flask.redirect(flask.url_for("profile"))
-	elif flask.request.method=="POST" and register.validate():
-		cuenta = bank.crearCuenta(register.password.data)
-		flask.session["registerID"]=cuenta
-		return flask.redirect(flask.url_for('login'))
+	elif flask.request.method=="POST":
+		response={"validation":False}
+		if formulario.validate():
+			response["validation"]=True
+			flask.session["registerID"]=bank.crearCuenta(formulario.password.data)
+		else:
+			response["errors"]=formulario.errors
+		return flask.jsonify(response)
 	else:
-		return flask.render_template("register.html",form=register)
+		return flask.render_template("register.html",form=formulario)
 
 @app.route("/login",methods=["GET","POST"])
 def login():
 	formulario = bank_forms.LoginForm(bank)(flask.request.form)
 	if 'account' in flask.session:
 		return flask.redirect(flask.url_for("profile"))
-	elif flask.request.method=="POST" and formulario.validate():
-		flask.session["account"]=formulario.account.data
-		flask.session["password"]=formulario.password.data
-		return flask.redirect(flask.url_for("profile"))
+	elif flask.request.method=="POST":
+		response = {"validation":False}
+		if formulario.validate():
+			flask.session["account"]=formulario.account.data
+			flask.session["password"]=formulario.password.data
+			response["validation"]=True
+		else:
+			response["errors"]=formulario.errors
+		return flask.jsonify(response)
 	else:
 		account_value=""
 		alert=None
@@ -71,15 +80,24 @@ def login():
 			account_value = flask.request.form["account"]
 		return flask.render_template("login.html",form=formulario,alert=alert,account_value=account_value)
 
-@app.route("/mi_cuenta")
-def profile():
+@app.route("/mi_cuenta/")
+@app.route("/mi_cuenta/<int:page>")
+def profile(page=1):
 	if 'account' in flask.session:
 		cuenta=bank.obtenerCuenta(flask.session['account'],flask.session['password'])
-		return flask.render_template("cuenta.html",
-			cuenta=cuenta['cuenta'],
-			nmonedas=cuenta['monedas'],
-			npages=int(math.ceil(cuenta['monedas']/20))
-		)
+		cuenta['cuenta'].actualizarSaldo()
+		monedas=banco.paginarMonedas(cuenta["cuenta"],page)
+		if monedas['error']:
+			return flask.render_template("cuenta.html",cuenta=True,monedas=monedas)
+		else:
+			return flask.render_template("cuenta.html",
+				cuenta=cuenta['cuenta'],
+				nmonedas=cuenta['monedas'],
+				monedas=[moneda.__json__() for moneda in monedas['monedas']],
+				npages=(lambda a,b:(a/b)+1 if a%b else (a/b))(cuenta['monedas'],20),
+				page=page,
+				last_page=monedas['last_page']
+			)
 	else:
 		return flask.redirect(flask.url_for("login"))
 
@@ -105,14 +123,27 @@ def admin_main():
 	else:
 		return flask.redirect(flask.url_for('home'))
 
-@app.route("/admin/cuentas/<cuenta_id>")
-def informacion_cuenta(cuenta_id):
+@app.route("/admin/cuenta/<cuenta_id>/")
+@app.route("/admin/cuenta/<cuenta_id>/<int:page>")
+def informacion_cuenta(cuenta_id,page=1):
 	if 'account' in flask.session:
 		cuenta = bank.obtenerCuenta(flask.session['account'],flask.session['password'])["cuenta"]
 		if cuenta.permisos():
 			cuenta = bank.obtenerCuenta(cuenta_id,admin=cuenta)
 			if cuenta: 
-				return flask.render_template("cuenta.html",cuenta=cuenta)
+				cuenta['cuenta'].actualizarSaldo()
+				monedas=banco.paginarMonedas(cuenta["cuenta"],page)
+				if monedas['error']:
+					return flask.render_template("cuenta.html",cuenta=True,monedas=monedas)
+				else:
+					return flask.render_template("cuenta.html",
+						cuenta=cuenta['cuenta'],
+						nmonedas=cuenta['monedas'],
+						monedas=[moneda.__json__() for moneda in monedas['monedas']],
+						npages=(lambda a,b:(a/b)+1 if a%b else (a/b))(cuenta['monedas'],20),
+						page=page,
+						last_page=monedas['last_page']
+					)
 			else:
 				return flask.render_template("cuenta.html",cuentaID=cuenta_id)
 		else:
@@ -121,11 +152,12 @@ def informacion_cuenta(cuenta_id):
 		return flask.redirect(flask.url_for('login'))
 
 @app.route("/admin/cuentas/")
-def informacion_cuentas():
+@app.route("/admin/cuentas/<int:page>")
+def informacion_cuentas(page=1):
 	if 'account' in flask.session:
-		cuenta = bank.obtenerCuenta(flask.session['account'],flask.session['password'])
+		cuenta = bank.obtenerCuenta(flask.session['account'],flask.session['password'])["cuenta"]
 		if cuenta.permisos():
-			return flask.render_template("cuentas.html",cuentas=bank.obtenerCuentas(cuenta))
+			return flask.render_template("cuentas.html",cuentas=bank.obtenerCuentas(cuenta,page=page))
 		else:
 			return flask.redirect(flask.url_for("profile"))
 	else:
@@ -134,4 +166,4 @@ def informacion_cuentas():
 if __name__=="__main__":
 	csrf.init_app(app)
 	app.run(port=8080)
-
+#Luis Albizo 2017-01-20

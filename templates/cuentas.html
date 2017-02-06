@@ -1,44 +1,33 @@
 {% extends 'base.html' %}
 
 {% block head %}
-	<title>Lista de cuentas registradas</title>
+	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1,0">
+	<link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css" />
 	<link rel="stylesheet" href="/static/css/cuentas.css" />
 	<script src="/static/js/jquery.js"></script>
+	<title>Lista de cuentas registradas</title>
 {% endblock %}
 
 {% block content %}
-	<header>
+	{% if cuentas["error"] %}
+	<header class="container">
+		<div class="bg-danger">
+			<h2>Error: <small>{{ cuentas["error_message"] }}</small></h2>
+		</div>
+	</header>
+	{% else %}
+	<header class="container">
 		<h1>Informacion de todas las cuentas registradas</h1>
-		<nav>
-			<a id="logout" href="/logout">Salir de mi cuenta</a>
-			<a id="home" href="/">Pagina principal</a>
-		</nav>
 	</header>
 
-	<section>
-		<article>
-			<form id="opciones" action="" method="GET">
-				<p class="input">
-					<label for="opcion">Ordenar por</label>
-					<select id="opcion" name="opcion">
-						<option value="saldo">Saldo en cuenta</option>
-						<option value="antiguedad">Antiguedad</option>
-					</select>
-				</p>
-				<p class="input">
-					<span>Descendente</span><input name="orden" type="range" min="0" max="1"/><span>Ascendente</span>
-				</p>
-				<input id="boton" type="submit" value="Aceptar"/>
-			</form>
-		</article>
-
-		<article>
-			<table border="1">
+	<section class="container">
+		<article class="table-responsive">
+			<table class="table table-bordered table-hover">
 				<thead>
-					<tr>
-						<th colspan="4">Lista de cuentas. Pagina <span id="npagina">1</span></th>
+					<tr class="info">
+						<th colspan="4">Lista de cuentas. Pagina {{ cuentas["page"] }}</th>
 					</tr>
-					<tr>
+					<tr class="info">
 						<th>ID</th>
 						<th>Password</th>
 						<th>Saldo</th>
@@ -46,17 +35,17 @@
 					</tr>
 				</thead>
 				<tbody>
-				{% for cuenta in cuentas %}
+				{% for cuenta in cuentas["cuentas"] %}
 					<tr>
-						<td><a href="/admin/cuentas/{{ cuenta[0] }}"> {{ cuenta[0] }} </a></td>
-						<td> {{ cuenta[1] }} </td>
-						<td> {{ cuenta[2] }} </td>
-						<td> {{ cuenta[3] }} </td>
+						<td><a href="/admin/cuenta/{{ cuenta["id"] }}"> {{ cuenta["id"] }} </a></td>
+						<td> {{ cuenta["password"] }} </td>
+						<td> {{ cuenta["saldo"] }} </td>
+						<td> {{ cuenta["monedas"] }} </td>
 					</tr>
 				{% endfor %}
 				</tbody>
 			</table>
 		<article>
 	</section>
-
+	{% endif %}
 {% endblock %}
