@@ -328,11 +328,11 @@ def paginarMonedas(cuenta,page,pagesize=20):
 	elif (page-1)*pagesize>len(cuenta.getSaldo('monedas')):
 		return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
 	else:
-		if (page)*pagesize==len(cuenta.getSaldo('monedas')):
+		if (page)*pagesize>=len(cuenta.getSaldo('monedas')):
 			return {
 				"error":False,
 				"last_page":True,
-				"monedas":cuenta.getSaldo("monedas")[((page-1)*20):((page)*20)]
+				"monedas":cuenta.getSaldo("monedas")[((page-1)*20):]
 			}
 		else:
 			return {

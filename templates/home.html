@@ -1,19 +1,93 @@
-<html>
-<head>
-	<meta http-equiv="content-type" content="text/html; charset=utf-8">
-	<link rel="stylesheet" href="/static/css/home.css" type="text/css" media="screen" charset="utf-8">
-	<title>Pagina principal</title>
-</head>
-<body>
-	<h1>Bienvenido a este banco</h1>
-	{% if alert %}
-		<p id="alert">{{alert}}</p>
-	{% endif %}
+{% extends 'base.html' %}
 
-	<nav>
-		<a href="register">Registrate aqui</a>
-		<a href="login">Inicia sesion aqui</a>
-		<a href="mi_cuenta">Ve la informacion de tu cuenta aqui</a>
-	</nav>
-</body>
-</html>
+{% block head %}
+	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1,0">
+	<link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
+	<link rel="stylesheet" href="/static/css/home.css" type="text/css" media="screen" charset="utf-8">
+	<script src="/static/js/jquery.js"></script>
+	<script src="/static/bootstrap/js/bootstrap.min.js"></script>
+	<title>TBanco Flask</title>
+{% endblock %}
+
+{% block content %}
+	<header class="container">
+		<div class="row">
+			<h1 class="hidden-xs text-center">Bienvenido a TBanco Flask</h1>
+			<h1 class="visible-xs text-center">TBanco Flask</h1>
+		</div>
+
+		<div class="row">
+			<div class="col-xs-12">
+				<ul class="nav nav-pills nav-justified">
+					<li>
+						<a href="register">
+							<span class="glyphicon glyphicon-pencil"></span> Registrate
+						</a>
+					</li>
+					<li>
+						<a href="login">
+							<span class="glyphicon glyphicon-log-in"></span> Inicia sesion
+						</a>
+					</li>
+					<li>
+						<a href="mi_cuenta">
+							<span class="glyphicon glyphicon-user"></span> Informacion de tu cuenta
+						</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</header>
+
+	<section class="container">
+		<div class="row">
+			<article class="aim col-xs-12 col-sm-6">
+				<h3><span class="label label-primary">INFO</span> Que es un TBanco?</h3>
+				<p class="lead">
+					Un TBanco es un banco emisor de TMonedas y TCuentas.
+				</p>
+				<ul>
+					<h6>Nosotros ofrecemos al usuario:</h6>
+					<li>TSeguros</li>
+					<li>TCuentas</li>
+					<li>TMonedas</li>
+				</ul>
+			</article>
+			
+			<article class="bel col-xs-12 col-sm-6">
+				<h3><span class="label label-primary">INFO</span> Que es una TMoneda?</h3>
+				<p class="lead">
+					Una TMoneda es una moneda electronica con una propiedad especial: <span><u>el tiempo</u></span>.
+					Al momento de emitirse una TMoneda se le asigna una duracion y un valor, el valor puede ser 1, 10, 100, 1000
+					o 10000; y la duracion entre 10 y 16000 <span><small>(minutos)</small></span>, estos valores no 
+					pueden ser modificados y una vez que la duracion de la moneda llegue a 0, esta desaparecera.
+				</p>
+				<a class="btn btn-primary disabled" href="monedas">Obtener TMonedas <small>(no disponible actualmente)</small></a>
+			</article>
+			<div class="clearfix"></div>
+			<article class="aim col-xs-12 col-sm-6">
+				<h3><span class="label label-primary">INFO</span> Que es una TCuenta?</h3>
+				<p class="lead">
+					Una TCuenta es una cuenta electronica de TMonedas.
+				</p>
+				<a class="botones btn btn-primary" href="register">Obtener una TCuenta</a>
+				<a class="botones btn btn-primary" href="register">Acceder a mi TCuenta</a>
+				<a class="botones btn btn-primary" href="register">Informacion de mi TCuenta</a>
+			</article>
+
+			<article class="bel col-xs-12 col-sm-6">
+				<h3><span class="label label-default">PROXIMAMENTE</span> Gana TMonedas jugando TPoker!</h3>
+				<p class="lead">
+					Compite con otros jugadores, apuesta tu tiempo y gana muchas TMonedas.
+					La modalidad Texas Hold'em ahora adaptada a las TMonedas.
+				</p>
+				<a class="btn btn-danger disabled" href="poker">Jugar Poker <small>(no disponible actualmente)</small></a>
+			</article>
+			<div class="clearfix"></div>
+		</div>
+	</section>
+
+	<footer class="container">
+		<small>El creador del concepto de las TMonedas y fundador de este banco es Luis Albizo</small>
+	</footer>
+{% endblock %}
