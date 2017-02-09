@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block head %}
+	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1,0">
+	<link rel="stylesheet" href="/static/css/chat.css">
+	<link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
+	<script src="/static/js/socket.io.min.js"></script>
+	<script src="/static/js/jquery.js"></script>
+	<script src="/static/bootstrap/js/bootstrap.min.js"></script>
+	<script>
+		var username = {{ user }};
+	</script>
+	<script src="/static/js/chat.js"></script>
+	<title>TBanco Chat</title>
+{% endblock %}
+
+{% block content %}
+	<header class="container">
+		<div class="row">
+			<nav class="col-xs-12 navbar navbar-default navbar-fixed-top navbar-inverse">
+				<div class="container-fluid">
+					<div class="navbar-header">
+						<button class="navbar-toggle collapsed" data-toggle="collapse" data-target="#menu-header">
+							<span class="sr-only">Menu</span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+						</button>
+
+						<span class="navbar-brand">
+							<span class="glyphicon glyphicon-user"></span> {{ user }}
+						</span>
+					</div>
+
+					<div class="collapse navbar-collapsed" id="menu-header">
+						<ul class="navbar navbar-nav">
+							<li><a id="logout" href="/logout">
+								<span class="glyphicon glyphicon-log-out"></span> Salir de mi cuenta
+							</a></li>
+							<li><a id="home" href="/">
+								<span class="glyphicon glyphicon-home"></span> Pagina principal
+							</a></li>
+						</ul>
+					</div>
+				</div>
+			</nav>
+		</div>
+	</header>
+	
+	<section id="mensajesContainer" class="container">
+		<div class="row">
+			<div class="col-xs-12">
+				<ul id="mensajes">
+
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<div id="entrada">
+		<input type="text" id="mensaje" placeholder="Escribe un mensaje...">
+		<button id="send">Enviar</button>
+	</div>
+{% endblock %}

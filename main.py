@@ -5,7 +5,7 @@ import config
 import bank_forms
 import banco
 import pickle
-import math
+from flask_socketio import SocketIO, emit
 
 try:
 	f=open("data/bank.pk","rb")
@@ -28,6 +28,11 @@ finally:
 app = flask.Flask(__name__)
 app.config.from_object(config.MiConfig)
 csrf = flask_wtf.CSRFProtect()
+socketio = SocketIO(app)
+
+#@app.before_request
+#def bef():
+#	print flask.request.headers
 
 @app.errorhandler(404)
 def notFound(error):
@@ -80,7 +85,7 @@ def login():
 			account_value = flask.request.form["account"]
 		return flask.render_template("login.html",form=formulario,alert=alert,account_value=account_value)
 
-@app.route("/mi_cuenta/")
+@app.route("/mi_cuenta")
 @app.route("/mi_cuenta/<int:page>")
 def profile(page=1):
 	if 'account' in flask.session:
@@ -112,7 +117,7 @@ def logout():
 
 #Rutas para administrador
 
-@app.route("/admin/")
+@app.route("/admin")
 def admin_main():
 	if 'account' in flask.session:
 		cuenta = bank.obtenerCuenta(flask.session['account'],flask.session['password'])["cuenta"]
@@ -123,7 +128,7 @@ def admin_main():
 	else:
 		return flask.redirect(flask.url_for('home'))
 
-@app.route("/admin/cuenta/<cuenta_id>/")
+@app.route("/admin/cuenta/<cuenta_id>")
 @app.route("/admin/cuenta/<cuenta_id>/<int:page>")
 def informacion_cuenta(cuenta_id,page=1):
 	if 'account' in flask.session:
@@ -151,7 +156,7 @@ def informacion_cuenta(cuenta_id,page=1):
 	else:
 		return flask.redirect(flask.url_for('login'))
 
-@app.route("/admin/cuentas/")
+@app.route("/admin/cuentas")
 @app.route("/admin/cuentas/<int:page>")
 def informacion_cuentas(page=1):
 	if 'account' in flask.session:
@@ -163,7 +168,23 @@ def informacion_cuentas(page=1):
 	else:
 		return flask.redirect(flask.url_for('login'))
 
+#Chat
+
+@app.route("/chat/")
+def chatPage():
+	if 'account' in flask.session:
+		return flask.render_template("chat.html",user=flask.session["account"])
+	else:
+		return flask.redirect(flask.url_for('login'))
+
+#WebSockets de la aplicacion
+
+@socketio.on("mensaje",namespace="/chat")
+def redirect(msg):
+	print dir(socketio)
+	emit("mensaje", ("[%s]%s> %s" % (banco.tools.localtime(),flask.session.get('account','user'),msg)), broadcast=True)
+
 if __name__=="__main__":
 	csrf.init_app(app)
-	app.run(port=8080)
+	socketio.run(app,port=8080)
 #Luis Albizo 2017-01-20
