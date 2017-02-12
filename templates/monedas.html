@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block head %}
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<title>Formularios</title>
+	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1,0">
+	<link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css" type="text/css" media="screen" charset="utf-8">
+	<link rel="stylesheet" href="/static/css/monedas.css" type="text/css" media="screen" charset="utf-8">
+	<script src="/static/js/jquery.js"></script>
+	<script src="/static/bootstrap/js/bootstrap.min.js"></script>
+	<script src="/static/js/monedas.js"></script>
+{% endblock %}
+
+{% block content %}
+	<header class="container">	
+		<div class="row">
+			<nav class="col-xs-12 navbar navbar-default navbar-fixed-top">
+				<div class="container-fluid">
+					<div class="navbar-header">
+						<button class="navbar-toggle collapsed" data-toggle="collapse" data-target="#menu-header">
+							<span class="sr-only">Menu</span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+						</button>
+
+						<span class="navbar-brand">
+							<span class="glyphicon glyphicon-user"></span> {{ cuenta }}
+						</span>
+					</div>
+
+					<div class="collapse navbar-collapsed" id="menu-header">
+						<ul class="navbar navbar-nav">
+							<li><a href="/mi_cuenta">
+								<span class="glyphicon glyphicon-user"></span> Mi cuenta
+							</a></li>
+							<li><a href="/chat">
+								<span class="glyphicon glyphicon-inbox"></span> Entrar al chat
+							</a></li>
+							<li><a id="home" href="/">
+								<span class="glyphicon glyphicon-home"></span> Pagina principal
+							</a></li>
+						</ul>
+					</div>
+				</div>
+			</nav>
+
+			<div class="row">
+				<h1 class="text-center">Agrega monedas a tu cuenta!</h1>
+			</div>
+		</div>
+	</header>
+
+	<section class="container">
+		<div class="row">
+			<form action="" method="POST" accept-charset="utf-8">
+				<h3>Introduce la informacion de las monedas</h3>
+				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+				<div class="form-group">
+					<label for="cantidad">Cantidad:</label>
+					<div class="input-group">
+						<span class="input-group-addon">1</span>
+						<input type="range" id="cantidad" name="cantidad" min="1" max="100" class="form-control" value="20">
+						<span class="input-group-addon">100</span>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<label for="select01">Escoge una valor pars las monedas: </label>
+					<select id="select01" name="valor" class="form-control">
+						<option value="1">1</option>
+						<option value="10">10</option>
+						<option value="100">100</option>
+						<option value="1000">1000</option>
+						<option value="10000">10000</option>
+						<option value="0">Valores Aleatorios</option>
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label for="duracion">Duracion de la moneda:</label>
+					<div class="input-group">
+						<p class="input-group-addon">10</p>
+						<input type="range" id="duracion" name="duracion" min="10" max="16000" class="form-control" value="1440">
+						<p class="input-group-addon">16000</p>
+					</div>
+				</div>
+				<hr>
+
+				<div class="form-group">
+					<label for="cuenta">Agregar a:</label>
+					<input type="text" id="cuenta" class="form-control" value="{{ cuenta }}" disabled>
+				</div>
+
+				<div class="form-group">
+					<label for="clave">Contrase&ntilde;a de confirmacion:</label>
+					<input type="password" id="clave" name="password" class="form-control" placeholder="Escribe tu contrase&ntilde;a">
+					<ul id="errors">
+					</ul>
+				</div>
+
+				<input type="submit" class="btn btn-success col-xs-offset-2" value="Agregar Monedas a {{ cuenta }}">
+			</form>
+		</div>	
+	</section>
+
+	<footer class="container">
+		<p class="text-center">
+			<a href="/"><span class="glyphicon glyphicon-home"></span> Pagina principal</a>
+		</p>
+	</footer>
+
+{% endblock %}

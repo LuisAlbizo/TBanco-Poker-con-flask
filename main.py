@@ -115,6 +115,28 @@ def logout():
 		pass
 	return flask.redirect(flask.url_for("login"))
 
+@app.route('/monedas', methods=['GET','POST'])
+def monedas():
+	if 'account' in flask.session:
+		if flask.request.method=='POST':
+			if flask.session['password']==flask.request.form['password']:
+				cuenta=bank.obtenerCuenta(flask.session['account'],flask.session['password'])['cuenta']
+				def agregarMonedas(data):
+					print(data)
+					for _ in range(int(data['cantidad'])):
+						cuenta.agregarMoneda(banco.TMoneda(
+							duracion=int(data['duracion']),
+							valor=(lambda v:v if v else [1,10,100,1000,10000][banco.tools.random.randint(0,4)])(int(data['valor']))
+						))
+				banco.threading.Thread(target=agregarMonedas,args=(flask.request.form.to_dict(),)).start()
+				return flask.jsonify({'validation':True})
+			else:
+				return flask.jsonify({'validation':False,'error':'La contrasena es incorrecta'})
+		else:
+			return flask.render_template('monedas.html',cuenta=flask.session['account'])
+	else:
+		return flask.redirect(flask.url_for("login"))
+
 #Rutas para administrador
 
 @app.route("/admin")

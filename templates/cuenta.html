@@ -48,6 +48,9 @@
 							<li><a href="/chat">
 								<span class="glyphicon glyphicon-inbox"></span> Entrar al chat
 							</a></li>
+							<li><a href="/monedas">
+								<span class="glyphicon glyphicon-bc"></span> Obtener Monedas
+							</a></li>
 							<li><a id="home" href="/">
 								<span class="glyphicon glyphicon-home"></span> Pagina principal
 							</a></li>
@@ -93,7 +96,7 @@
 			{% if page==1 %}
 			<a class="btn btn-primary disabled">
 			{% else %}
-			<a class="btn btn-primary" href="{{ page-1 }}">
+			<a class="btn btn-primary" href="/mi_cuenta/{{ page-1 }}">
 			{% endif %}
 				<span class="glyphicon glyphicon-chevron-left"></span> Anterior
 			</a>
@@ -101,7 +104,7 @@
 			{% if last_page %}
 			<a class="btn btn-primary disabled">
 			{% else %}
-			<a class="btn btn-primary" href="{{ page+1 }}">
+			<a class="btn btn-primary" href="/mi_cuenta/{{ page+1 }}">
 			{% endif %}
 				Siguiente <span class="glyphicon glyphicon-chevron-right"></span>
 			</a>
