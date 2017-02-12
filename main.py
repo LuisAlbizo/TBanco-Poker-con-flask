@@ -179,10 +179,16 @@ def chatPage():
 
 #WebSockets de la aplicacion
 
-@socketio.on("mensaje",namespace="/chat")
+chatColors={}
+@socketio.on('connect')
+def setColor():
+	chatColors[flask.session.get('account','user')]=("#"+hex(banco.tools.random.randint(0,0xffffff))[2:])
+
+@socketio.on("mensajeClient",namespace="/chat")
 def redirect(msg):
-	print dir(socketio)
-	emit("mensaje", ("[%s]%s> %s" % (banco.tools.localtime(),flask.session.get('account','user'),msg)), broadcast=True)
+	emit("mensajeServer", 
+			{"color":chatColors[flask.session.get('account','user')],"time":banco.tools.localtime(),
+			"user":flask.session.get('account','user'),"msg":msg}, broadcast=True)
 
 if __name__=="__main__":
 	csrf.init_app(app)
