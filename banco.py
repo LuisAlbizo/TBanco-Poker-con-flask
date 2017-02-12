@@ -66,14 +66,15 @@ class TBanco:
 			password=next(cursor)[0]
 			cursor.close()
 			if password==clave:
-				info=next(db_accounts.execute("SELECT Account_data, saldo, monedas FROM 'Accounts' WHERE ID='%s'" % ID))
-				db_accounts.close() 
+				info=next(db_accounts.execute("SELECT Account_data FROM 'Accounts' WHERE ID='%s'" % ID))
 				cuenta=pickle.loads(base64.b64decode(info[0].encode()))
 				cuenta.actualizarSaldo()
+				info=next(db_accounts.execute("SELECT saldo, monedas FROM 'Accounts' WHERE ID='%s'" % ID))
+				db_accounts.close() 
 				return {
 					"cuenta":cuenta,
-					"saldo":info[1],
-					"monedas":info[2]
+					"saldo":info[0],
+					"monedas":info[1]
 					}
 			elif admin and admin.permisos():
 				info=next(db_accounts.execute("SELECT Account_data, saldo, monedas FROM 'Accounts' WHERE ID='%s'" % ID))
@@ -362,7 +363,6 @@ class TCuenta:
 		def f(moneda=moneda):
 			if moneda.consultarValor()>0 and moneda.consultarExpiracion()>0:
 				self.cambio={"cambio":True,"tipo":"nueva_moneda","moneda":moneda.__json__()}
-				self.actualizarSaldo()
 				return True
 			else:
 				self.cambio={"cambio":False}
