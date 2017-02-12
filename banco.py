@@ -57,7 +57,6 @@ class TBanco:
 		db_accounts.commit()
 		db_accounts.close()
 		threading.Thread(target=agregarMonedas).start()
-		cuenta.actualizarSaldo()
 		return cuenta.getID()
 
 	def obtenerCuenta(self,ID,clave="_",admin=None):
@@ -159,14 +158,10 @@ class Monedero:
 			)
 			self.__cuenta.saldo_monedas=self.mapCurToTMonedas(monedas)
 			r=a_funcion()
-			if r=="actualizacion":
-				db_accounts.close()
-				return True
 			del self.__cuenta.saldo_monedas
 			del self.__cuenta.saldo_valor
 			if self.__cuenta.cambio["cambio"]:
 				if self.__cuenta.cambio["tipo"]=="nueva_moneda":
-					print(self.__cuenta.cambio['moneda'])
 					db_accounts.execute("INSERT INTO Monedas (ID,valor,creacion,duracion,ID_Account) \
 					VALUES ('%s',%i,%i,%i,'%s')" % (
 						self.__cuenta.cambio['moneda']['ID'],
@@ -220,24 +215,25 @@ class Monedero:
 			if tipo_filtro=="exp":
 				matches=self.mapCurToTMonedas(
 					db_accounts.execute(
-						"SELECT ID,valor,duracion,creacion,ROUND((creacion/60)+duracion) AS expiracion FROM Monedas WHERE\
-						ID_Account='%s' AND expiracion > %i AND ((expiracion >= 0 AND expiracion <= %i) OR\
-						(expiracion >= %i AND expiracion <= 16000))" % (
+						"SELECT ID,valor,duracion,creacion,ROUND((creacion/60)+duracion) AS expiracion FROM Monedas WHERE \
+						ID_Account='%s' AND expiracion > %i AND ((expiracion > 0 AND expiracion < %i) OR \
+						(expiracion > %i AND expiracion <= %i+16000))" % (
 							self.__cuenta.getID(),
 							int(time.time()/60),
-							rango[1],
-							rango[0]
+							int(time.time()/60)+rango[1],
+							int(time.time()/60)+rango[0],
+							int(time.time()/60)
 						)
 					)
 				)
 				db_accounts.close()
 				return matches
-			if tipo_filtro=="val":
+			elif tipo_filtro=="val":
 				matches=self.mapCurToTMonedas(
 					db_accounts.execute(
-						"SELECT ID,valor,duracion,creacion,ROUND((creacion/60)+duracion) AS expiracion FROM Monedas WHERE\
-						ID_Account='%s' AND expiracion > %i AND ((valor >= 0 AND valor <= %i) OR\
-						(valor >= %i AND valor <= 16000))" % (
+						"SELECT ID,valor,duracion,creacion,ROUND((creacion/60)+duracion) AS expiracion FROM Monedas WHERE \
+						ID_Account='%s' AND expiracion > %i AND ((valor >= 0 AND valor <= %i) OR \
+						(valor > %i AND valor <= 16000))" % (
 							self.__cuenta.getID(),
 							int(time.time()/60),
 							rango[1],
@@ -255,8 +251,8 @@ class Monedero:
 						ID_Account='%s' AND expiracion > %i AND expiracion >= %i AND expiracion <= %i" % (
 							self.__cuenta.getID(),
 							int(time.time()/60),
-							rango[0],
-							rango[1]
+							int(time.time()/60)+rango[0],
+							int(time.time()/60)+rango[1]
 						)
 					)
 				)
@@ -366,7 +362,7 @@ class TCuenta:
 		def f(moneda=moneda):
 			if moneda.consultarValor()>0 and moneda.consultarExpiracion()>0:
 				self.cambio={"cambio":True,"tipo":"nueva_moneda","moneda":moneda.__json__()}
-				del moneda
+				self.actualizarSaldo()
 				return True
 			else:
 				self.cambio={"cambio":False}
