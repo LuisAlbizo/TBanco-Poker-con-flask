@@ -35,7 +35,6 @@ class TBanco:
 				for _ in range(75):
 					cuenta.agregarMoneda(TMoneda([100,1000,10000][tools.random.randint(0,2)],tools.random.randint(720,2160)))
 					cuenta.agregarMoneda(TMoneda([1,10][tools.random.randint(0,1)],tools.random.randint(1600,16000)))
-			threading.Thread(target=agregarMonedas).start()
 		else:
 			#Si su clave no es la del banco, creamos una cuenta normal (sin permisos)
 			cuenta=TCuenta(clave,tools.randomString(8))
@@ -44,12 +43,11 @@ class TBanco:
 			def agregarMonedas():
 				for _ in range(20):
 					cuenta.agregarMoneda(TMoneda(100,1440))
-			threading.Thread(target=agregarMonedas).start()
 		#Establecemos la conexion a la base de datos
 		db_accounts=sqlite3.connect("./data/db/"+self.__cuentas_db+".db")
 		#Creamos un registro con la cuenta que acabamos de crear
 		db_accounts.execute(
-			"INSERT INTO 'Accounts' (ID,Account_data,password,permisos) VALUES ('%s','%s','%s','%s')" % (
+			"INSERT INTO 'Accounts' (ID,Account_data,password,permisos,saldo,monedas) VALUES ('%s','%s','%s','%s',0,0)" % (
 				cuenta.getID(), base64.b64encode(pickle.dumps(cuenta)).decode(), clave, cuenta.permisos()
 				)
 			)
@@ -58,6 +56,7 @@ class TBanco:
 		#Cerramos los flujos de datos o conexiones con la base de datos y retornamos el ID de la cuenta
 		db_accounts.commit()
 		db_accounts.close()
+		threading.Thread(target=agregarMonedas).start()
 		cuenta.actualizarSaldo()
 		return cuenta.getID()
 
@@ -69,10 +68,9 @@ class TBanco:
 			cursor.close()
 			if password==clave:
 				info=next(db_accounts.execute("SELECT Account_data, saldo, monedas FROM 'Accounts' WHERE ID='%s'" % ID))
-				print(info)
-				print(next(db_accounts.execute("SELECT * FROM 'Accounts' WHERE ID='%s'" % ID)))
 				db_accounts.close() 
 				cuenta=pickle.loads(base64.b64decode(info[0].encode()))
+				cuenta.actualizarSaldo()
 				return {
 					"cuenta":cuenta,
 					"saldo":info[1],
@@ -168,7 +166,9 @@ class Monedero:
 			del self.__cuenta.saldo_valor
 			if self.__cuenta.cambio["cambio"]:
 				if self.__cuenta.cambio["tipo"]=="nueva_moneda":
-					db_accounts.execute("INSERT INTO Monedas VALUES('%s',%i,%i,%i,'%s')" % (
+					print(self.__cuenta.cambio['moneda'])
+					db_accounts.execute("INSERT INTO Monedas (ID,valor,creacion,duracion,ID_Account) \
+					VALUES ('%s',%i,%i,%i,'%s')" % (
 						self.__cuenta.cambio['moneda']['ID'],
 						self.__cuenta.cambio['moneda']['valor'],
 						self.__cuenta.cambio['moneda']['emision'],
@@ -199,19 +199,20 @@ class Monedero:
 			a_funcion()
 			db_accounts=sqlite3.connect("./data/db/"+self.__db_name+".db")
 			db_accounts.execute(
-				"UPDATE Accounts SET monedas=%i, saldo=%i, Account_data='%s' WHERE ID='%s' AND ROUND((creacion/60)+duracion) > %i" % (
+				"UPDATE 'Accounts' SET monedas=(SELECT COUNT(*) FROM Monedas WHERE ID_Account='%s' AND \
+				ROUND((creacion/60)+duracion) > %i), saldo=(SELECT SUM(valor) FROM Monedas WHERE ID_Account='%s' AND \
+				ROUND((creacion/60)+duracion) > %i), Account_data='%s' WHERE ID='%s'" % (
 					self.__cuenta.getID(),
-					next(db_accounts.execute("SELECT COUNT(*) FROM Monedas WHERE ID_Account='%s'"))[0],
+					int(time.time()/60),
 					self.__cuenta.getID(),
-					next(db_accounts.execute("SELECT SUM(valor) FROM Monedas WHERE ID_Account='%s'"))[0],
+					int(time.time()/60),
 					base64.b64encode(pickle.dumps(self.__cuenta)).decode(),
-					self.__cuenta.getID(),
-					int(time.time()/60)
+					self.__cuenta.getID()
 				)
 			)
 			db_accounts.commit()
 			db_accounts.close()
-		return a_funcion
+		return actualizar
 
 	def obtenerMonedasEnRango(self,rango,tipo_filtro):		
 		db_accounts=sqlite3.connect("./data/db/"+self.__db_name+".db")
