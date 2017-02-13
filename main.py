@@ -21,9 +21,7 @@ except:
 	f.write(bank.getClaveSecreta())
 	f.close()
 	print "Nuevo TBanco creado"
-finally:
-	del f
-	print "La clave secreta del TBanco es: "+bank.getClaveSecreta()
+print "La clave secreta del TBanco es: "+bank.getClaveSecreta()
 
 app = flask.Flask(__name__)
 app.config.from_object(config.MiConfig)

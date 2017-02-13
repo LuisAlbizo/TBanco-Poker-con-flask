@@ -1,12 +1,7 @@
-import time, pickle, base64, threading
+import time, pickle, base64, threading, os
 from peewee import SqliteDatabase, Model, TextField, CharField, IntegerField, BooleanField, ForeignKeyField
 from functools import reduce
 import tools.tools as tools
-
-try:
-	xrange
-except:
-	xrange = range
 
 #Los modelos o Schemas de mi DB
 class ObjectField(TextField):
@@ -16,7 +11,7 @@ class ObjectField(TextField):
 	def db_value(self,value):
 		return base64.b64encode(pickle.dumps(value)).decode()
 
-db=SqliteDatabase("data/db/flask_bank.db")
+db=SqliteDatabase("data/db/"+os.environ.get('FLASK_BANK_DATABASE','flask_bank')+".db")
 
 class BaseModel(Model):
 	class Meta:
@@ -39,10 +34,11 @@ class Moneda(BaseModel):
 
 #El modelo del banco
 class TBanco:
-	def __init__(self,cuentas_db):
+	def __init__(self,db_name):
 		self.__clave_secreta=tools.randomString(16)
-		self.__cuentas_db=cuentas_db
+		self.__db_name=db_name
 		global db
+		db.connect()
 		db.create_table(Account,safe=True)
 		db.create_table(Moneda,safe=True)
 
@@ -51,10 +47,13 @@ class TBanco:
 
 	#Funciones para el usuario, basicas
 	def crearCuenta(self,clave):
+		global db
+		db=SqliteDatabase("data/db/"+self.__db_name+".db")
+		db.connect()
 		if clave==self.__clave_secreta:
 			#Si su clave es igual a la clave del banco le damos permisos a esa cuenta
 			cuenta=TCuentaAdmin(clave,tools.randomString(8))
-			cuenta._TCuenta__monedero = Monedero(cuenta,self.__cuentas_db)
+			cuenta._TCuenta__monedero = Monedero(cuenta,self.__db_name)
 			#... y le agregamos 150 monedas con valores aleatorios dentro de un rango algo alto
 			def agregarMonedas():
 				for _ in xrange(75):
@@ -63,7 +62,7 @@ class TBanco:
 		else:
 			#Si su clave no es la del banco, creamos una cuenta normal (sin permisos)
 			cuenta=TCuenta(clave,tools.randomString(8))
-			cuenta._TCuenta__monedero = Monedero(cuenta,self.__cuentas_db)
+			cuenta._TCuenta__monedero = Monedero(cuenta,self.__db_name)
 			#... y le agregamos 20 monedas con valor de 100 y duracion de 24 horas
 			def agregarMonedas():
 				for _ in xrange(20):
@@ -77,6 +76,8 @@ class TBanco:
 
 	def obtenerCuenta(self,ID,clave="_",admin=None):
 		global db
+		db=SqliteDatabase("data/db/"+self.__db_name+".db")
+		db.connect()
 		cursor=Account.select(Account.id_,Account.password).where(Account.id_ == ID)
 		if cursor.count():
 			password=next(cursor.__iter__()).password
@@ -104,6 +105,9 @@ class TBanco:
 			return None
 
 	def obtenerCuentas(self,admin,page=1,pagesize=20):
+		global db
+		db=SqliteDatabase("data/db/"+self.__db_name+".db")
+		db.connect()
 		#Verificamos que la cuenta que quiere acceder a esta informacion tenga permisos
 		if admin.permisos():
 			if page<=0:
@@ -128,10 +132,13 @@ class Monedero:
 	"""docstring for Monedero"""
 	def __init__(self,cuenta,db_name):
 		self.__cuenta=cuenta
-		#self.__db_name=db_name
+		self.__db_name=db_name
 
 	def __call__(self,a_funcion):
 		def actualizarMonedas():
+			global db
+			db=SqliteDatabase("data/db/"+self.__db_name+".db")
+			db.connect()
 			self.__cuenta.saldo_valor=sum(
 				[
 					moneda.valor for moneda in Moneda.select(Moneda,Account).join(Account).where(
@@ -177,6 +184,9 @@ class Monedero:
 	def actualizador(self,a_funcion):
 		def actualizar():
 			a_funcion()
+			global db
+			db=SqliteDatabase("data/db/"+self.__db_name+".db")
+			db.connect()
 			cuenta = next(Account.select().where(Account.id_ == self.__cuenta.getID()).__iter__())
 			cuenta.nmonedas = Moneda.select(Moneda,Account).join(Account).where(
 				(Account.id_ == self.__cuenta.getID()) & (Moneda.emision+(Moneda.duracion*60)>time.time())
