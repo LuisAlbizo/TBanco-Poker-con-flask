@@ -122,12 +122,12 @@ def monedas():
 			if flask.session['password']==flask.request.form['password']:
 				cuenta=bank.obtenerCuenta(flask.session['account'],flask.session['password'])['cuenta']
 				def agregarMonedas(data):
-					print(data)
-					for _ in range(int(data['cantidad'])):
+					for _ in xrange(int(data['cantidad'])):
 						cuenta.agregarMoneda(banco.TMoneda(
 							duracion=int(data['duracion']),
 							valor=(lambda v:v if v else [1,10,100,1000,10000][banco.tools.random.randint(0,4)])(int(data['valor']))
-						))
+							)
+						)
 				banco.threading.Thread(target=agregarMonedas,args=(flask.request.form.to_dict(),)).start()
 				return flask.jsonify({'validation':True})
 			else:

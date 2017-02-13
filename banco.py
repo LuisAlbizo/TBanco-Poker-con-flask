@@ -1,30 +1,55 @@
-import time, pickle, base64, sqlite3, threading
+import time, pickle, base64, threading
+from peewee import SqliteDatabase, Model, TextField, CharField, IntegerField, BooleanField, ForeignKeyField
 from functools import reduce
 import tools.tools as tools
 
+try:
+	xrange
+except:
+	xrange = range
+
+#Los modelos o Schemas de mi DB
+class ObjectField(TextField):
+	def python_value(self,value):
+		return pickle.loads(base64.b64decode(value).encode())
+
+	def db_value(self,value):
+		return base64.b64encode(pickle.dumps(value)).decode()
+
+db=SqliteDatabase("data/db/flask_bank.db")
+
+class BaseModel(Model):
+	class Meta:
+		database = db
+
+class Account(BaseModel):
+	id_			 =	CharField(8)
+	password	 =	CharField()
+	account_data =	ObjectField()
+	permisos	 =	BooleanField(default=False)
+	saldo		 =	IntegerField(default=0)
+	nmonedas	 =	IntegerField(default=0)
+
+class Moneda(BaseModel):
+	id_			=	CharField(13)
+	valor		=	IntegerField()
+	duracion	=	IntegerField()
+	emision		=	IntegerField()
+	id_account	=	ForeignKeyField(Account,to_field=Account.id_,related_name='monedas')
+
+#El modelo del banco
 class TBanco:
 	def __init__(self,cuentas_db):
 		self.__clave_secreta=tools.randomString(16)
 		self.__cuentas_db=cuentas_db
-		db_accounts=sqlite3.connect("./data/db/"+self.__cuentas_db+".db")
-		db_accounts.execute(
-		"CREATE TABLE IF NOT EXISTS Accounts(ID VARCHAR(8) NOT NULL,Account_data TEXT NOT NULL,password TEXT NOT NULL,\
-		Saldo INTEGER,permisos BOOLEAN NOT NULL,monedas INTEGER)")
-		db_accounts.execute("CREATE TABLE IF NOT EXISTS AccountsCount(ID INTEGER NOT NULL,Count INTEGER)")
-		db_accounts.execute("CREATE TABLE IF NOT EXISTS Monedas(ID VARCHAR(13) NOT NULL, valor INTEGER NOT NULL,\
-		creacion INTEGER NOT NULL, duracion INTEGER NOT NULL, ID_Account VARCHAR(8) NOT NULL)")
-		try:
-			next(db_accounts.execute("SELECT * FROM AccountsCount"))
-		except:
-			db_accounts.execute("INSERT INTO AccountsCount (ID,Count) VALUES (0,0)")
-		db_accounts.commit()
-		db_accounts.close()
+		global db
+		db.create_table(Account,safe=True)
+		db.create_table(Moneda,safe=True)
 
 	def getClaveSecreta(self):
 		return self.__clave_secreta
 
 	#Funciones para el usuario, basicas
-
 	def crearCuenta(self,clave):
 		if clave==self.__clave_secreta:
 			#Si su clave es igual a la clave del banco le damos permisos a esa cuenta
@@ -32,7 +57,7 @@ class TBanco:
 			cuenta._TCuenta__monedero = Monedero(cuenta,self.__cuentas_db)
 			#... y le agregamos 150 monedas con valores aleatorios dentro de un rango algo alto
 			def agregarMonedas():
-				for _ in range(75):
+				for _ in xrange(75):
 					cuenta.agregarMoneda(TMoneda([100,1000,10000][tools.random.randint(0,2)],tools.random.randint(720,2160)))
 					cuenta.agregarMoneda(TMoneda([1,10][tools.random.randint(0,1)],tools.random.randint(1600,16000)))
 		else:
@@ -41,90 +66,55 @@ class TBanco:
 			cuenta._TCuenta__monedero = Monedero(cuenta,self.__cuentas_db)
 			#... y le agregamos 20 monedas con valor de 100 y duracion de 24 horas
 			def agregarMonedas():
-				for _ in range(20):
+				for _ in xrange(20):
 					cuenta.agregarMoneda(TMoneda(100,1440))
-		#Establecemos la conexion a la base de datos
-		db_accounts=sqlite3.connect("./data/db/"+self.__cuentas_db+".db")
 		#Creamos un registro con la cuenta que acabamos de crear
-		db_accounts.execute(
-			"INSERT INTO 'Accounts' (ID,Account_data,password,permisos,saldo,monedas) VALUES ('%s','%s','%s','%s',0,0)" % (
-				cuenta.getID(), base64.b64encode(pickle.dumps(cuenta)).decode(), clave, cuenta.permisos()
-				)
-			)
-		#Aumentamos el contador de cuentas dentro de la base de datos en 1
-		db_accounts.execute("UPDATE AccountsCount SET Count=Count+1 WHERE ID=0")
+		registro=Account(id_=cuenta.getID(),account_data=cuenta,password=clave,permisos=cuenta.permisos())
+		registro.save()
 		#Cerramos los flujos de datos o conexiones con la base de datos y retornamos el ID de la cuenta
-		db_accounts.commit()
-		db_accounts.close()
 		threading.Thread(target=agregarMonedas).start()
 		return cuenta.getID()
 
 	def obtenerCuenta(self,ID,clave="_",admin=None):
-		db_accounts=sqlite3.connect("./data/db/"+self.__cuentas_db+".db")
-		cursor=db_accounts.execute("SELECT password FROM 'Accounts' WHERE ID='%s'" % ID)
-		try:
-			password=next(cursor)[0]
-			cursor.close()
+		global db
+		cursor=Account.select(Account.id_,Account.password).where(Account.id_ == ID)
+		if cursor.count():
+			password=next(cursor.__iter__()).password
 			if password==clave:
-				info=next(db_accounts.execute("SELECT Account_data FROM 'Accounts' WHERE ID='%s'" % ID))
-				cuenta=pickle.loads(base64.b64decode(info[0].encode()))
+				cuenta=next(Account.select(Account.account_data,Account.id_).where(Account.id_ == ID).__iter__()).account_data
 				cuenta.actualizarSaldo()
-				info=next(db_accounts.execute("SELECT saldo, monedas FROM 'Accounts' WHERE ID='%s'" % ID))
-				db_accounts.close() 
+				info = next(Account.select(Account.saldo,Account.nmonedas).where(Account.id_ == ID).__iter__())
 				return {
 					"cuenta":cuenta,
-					"saldo":info[0],
-					"monedas":info[1]
-					}
+					"saldo":info.saldo,
+					"monedas":info.nmonedas
+				}
 			elif admin and admin.permisos():
-				info=next(db_accounts.execute("SELECT Account_data, saldo, monedas FROM 'Accounts' WHERE ID='%s'" % ID))
-				db_accounts.close()
-				cuenta=pickle.loads(base64.b64decode(info[0].encode()))
+				cuenta=next(Account.select(Account.account_data).where(Account.id_ == ID).__iter__()).account_data
+				cuenta.actualizarSaldo()
+				info = next(Account.select(Account.saldo,Account.nmonedas).where(Account.id_ == ID).__iter__())
 				return {
 					"cuenta":cuenta,
-					"saldo":info[1],
-					"monedas":info[2]
-					}
+					"saldo":info.saldo,
+					"monedas":info.nmonedas
+				}
 			else:
 				return False
-		except:
-			cursor.close()
-			db_accounts.close()
+		else:
 			return None
 
-	def obtenerCuentas(self,admin,datos=["id","password","saldo","monedas"],page=1,pagesize=20):
+	def obtenerCuentas(self,admin,page=1,pagesize=20):
 		#Verificamos que la cuenta que quiere acceder a esta informacion tenga permisos
 		if admin.permisos():
 			if page<=0:
 				return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
-			db_accounts=sqlite3.connect("./data/db/"+self.__cuentas_db+".db")
-			cursor=db_accounts.execute("select %s from 'Accounts'" % reduce(lambda a,b:a+","+b,datos))
-			for _ in range(page-1):
-				for __ in range(pagesize):
-					try:
-						next(cursor)
-					except:
-						return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
-			cuentas=[]
+			cursor=Account.select(Account.id_,Account.password,Account.saldo,Account.nmonedas).offset(pagesize*(page-1))
+			if not(cursor.count()):
+				return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
+			cuentas=[cuenta.__dict__['_data'] for cuenta in cursor.peek(pagesize)]
 			last_page=False
-			to_json=eval("lambda cuenta_cur:{%s}" % reduce(
-					(lambda a,b:a+","+b),
-					[("'%s':cuenta_cur[%i]" % (datos[i],i)) for i in range(len(datos))]
-				)
-			)
-			for _ in range(pagesize):
-				try:
-					cuentas.append(to_json(next(cursor)))
-				except:
-					last_page=True
-					break
-			if not(last_page):
-				try:
-					next(cursor)
-				except:
-					last_page=True
-			cursor.close()
-			db_accounts.close()
+			if len(cuentas)<pagesize or cursor.count()==pagesize:
+				last_page=True
 			return {
 				"error":False,
 				"cuentas":cuentas,
@@ -138,24 +128,19 @@ class Monedero:
 	"""docstring for Monedero"""
 	def __init__(self,cuenta,db_name):
 		self.__cuenta=cuenta
-		self.__db_name=db_name
+		#self.__db_name=db_name
 
 	def __call__(self,a_funcion):
 		def actualizarMonedas():
-			db_accounts=sqlite3.connect("./data/db/"+self.__db_name+".db")
-			self.__cuenta.saldo_valor=next(db_accounts.execute(
-				"SELECT SUM(valor) FROM Monedas WHERE ID_Account='%s' AND ROUND((creacion/60)+duracion) > %i" % (
-						self.__cuenta.getID(),
-						int(time.time()/60)
+			self.__cuenta.saldo_valor=sum(
+				[
+					moneda.valor for moneda in Moneda.select(Moneda,Account).join(Account).where(
+						(Account.id_ == self.__cuenta.getID()) & (Moneda.emision+(Moneda.duracion*60)>time.time())
 					)
-				)
-			)[0]
-			monedas = db_accounts.execute(
-				"SELECT ID,valor,duracion,creacion,ROUND((creacion/60)+duracion) AS expiracion  FROM Monedas WHERE\
-				ID_Account='%s' AND expiracion > %i" % (
-					self.__cuenta.getID(),
-					int(time.time()/60)
-				)
+				]
+			)
+			monedas = Moneda.select().join(Account).where(
+				(Account.id_ == self.__cuenta.getID()) & (Moneda.emision+(Moneda.duracion*60)>time.time())
 			)
 			self.__cuenta.saldo_monedas=self.mapCurToTMonedas(monedas)
 			r=a_funcion()
@@ -163,125 +148,63 @@ class Monedero:
 			del self.__cuenta.saldo_valor
 			if self.__cuenta.cambio["cambio"]:
 				if self.__cuenta.cambio["tipo"]=="nueva_moneda":
-					db_accounts.execute("INSERT INTO Monedas (ID,valor,creacion,duracion,ID_Account) \
-					VALUES ('%s',%i,%i,%i,'%s')" % (
-						self.__cuenta.cambio['moneda']['ID'],
-						self.__cuenta.cambio['moneda']['valor'],
-						self.__cuenta.cambio['moneda']['emision'],
-						self.__cuenta.cambio['moneda']['duracion'],
-						self.__cuenta.getID()
-						)
+					moneda = Moneda(
+						id_			=	self.__cuenta.cambio['moneda']['ID'],
+						valor		=	self.__cuenta.cambio['moneda']['valor'],
+						emision		=	self.__cuenta.cambio['moneda']['emision'],
+						duracion	=	self.__cuenta.cambio['moneda']['duracion'],
+						id_account	=	self.__cuenta.getID()
 					)
+					moneda.save()
 				elif self.__cuenta.cambio["tipo"]=="transferencia":
-					db_accounts.execute("UPDATE Monedas SET ID_Account='%s' WHERE ID='%s'" % (
-						self.__cuenta.getID(),
-						self.__cuenta.cambio['id_moneda']
-						)
+					moneda = next(Moneda.select(Moneda.id_,Moneda.id_account).where(
+						Moneda.id_ == self.__cuenta.cambio['id_moneda']
+						).__iter__()
 					)
+					moneda.id_account = self.__cuenta.cambio['cuenta']
+					moneda.save()
 				elif self.__cuenta.cambio["tipo"]=="nueva_password":
-					db_accounts.execute("UPDATE Accounts SET password='%s' WHERE ID='%s'" % (
-						self.__cuenta.cambio['nueva_password'],
-						self.__cuenta.getID()
-						)
+					cuenta = next(Account.select(Account.id_,Account.password).where(
+						Account.id_ == self.__cuenta.getID()
+						).__iter__()
 					)
-				db_accounts.commit()
+					cuenta.password = self.__cuenta.cambio['nueva_password']
+					cuenta.save()
 			del self.__cuenta.cambio
-			db_accounts.close()
 			return r
 		return actualizarMonedas
 
 	def actualizador(self,a_funcion):
 		def actualizar():
 			a_funcion()
-			db_accounts=sqlite3.connect("./data/db/"+self.__db_name+".db")
-			db_accounts.execute(
-				"UPDATE 'Accounts' SET monedas=(SELECT COUNT(*) FROM Monedas WHERE ID_Account='%s' AND \
-				ROUND((creacion/60)+duracion) > %i), saldo=(SELECT SUM(valor) FROM Monedas WHERE ID_Account='%s' AND \
-				ROUND((creacion/60)+duracion) > %i), Account_data='%s' WHERE ID='%s'" % (
-					self.__cuenta.getID(),
-					int(time.time()/60),
-					self.__cuenta.getID(),
-					int(time.time()/60),
-					base64.b64encode(pickle.dumps(self.__cuenta)).decode(),
-					self.__cuenta.getID()
-				)
+			cuenta = next(Account.select().where(Account.id_ == self.__cuenta.getID()).__iter__())
+			cuenta.nmonedas = Moneda.select(Moneda,Account).join(Account).where(
+				(Account.id_ == self.__cuenta.getID()) & (Moneda.emision+(Moneda.duracion*60)>time.time())
+			).count()
+			cuenta.saldo = sum(
+				[
+					moneda.valor for moneda in Moneda.select(
+						Moneda.valor,Moneda.emision,Moneda.duracion,Account.id_
+					).join(Account).where(
+						Account.id_ == self.__cuenta.getID() & Moneda.emision+(Moneda.duracion*60)>time.time()
+					)
+				]
 			)
-			db_accounts.commit()
-			db_accounts.close()
+			cuenta.save()
 		return actualizar
 
 	def obtenerMonedasEnRango(self,rango,tipo_filtro):		
-		db_accounts=sqlite3.connect("./data/db/"+self.__db_name+".db")
-		if rango[0]>rango[1]:
-			if tipo_filtro=="exp":
-				matches=self.mapCurToTMonedas(
-					db_accounts.execute(
-						"SELECT ID,valor,duracion,creacion,ROUND((creacion/60)+duracion) AS expiracion FROM Monedas WHERE \
-						ID_Account='%s' AND expiracion > %i AND ((expiracion > 0 AND expiracion < %i) OR \
-						(expiracion > %i AND expiracion <= %i+16000))" % (
-							self.__cuenta.getID(),
-							int(time.time()/60),
-							int(time.time()/60)+rango[1],
-							int(time.time()/60)+rango[0],
-							int(time.time()/60)
-						)
-					)
-				)
-				db_accounts.close()
-				return matches
-			elif tipo_filtro=="val":
-				matches=self.mapCurToTMonedas(
-					db_accounts.execute(
-						"SELECT ID,valor,duracion,creacion,ROUND((creacion/60)+duracion) AS expiracion FROM Monedas WHERE \
-						ID_Account='%s' AND expiracion > %i AND ((valor >= 0 AND valor <= %i) OR \
-						(valor > %i AND valor <= 16000))" % (
-							self.__cuenta.getID(),
-							int(time.time()/60),
-							rango[1],
-							rango[0]
-						)
-					)
-				)
-				db_accounts.close()
-				return matches
-		else:
-			if tipo_filtro=="exp":
-				matches=self.mapCurToTMonedas(
-					db_accounts.execute(
-						"SELECT ID,valor,duracion,creacion,ROUND((creacion/60)+duracion) AS expiracion FROM Monedas WHERE\
-						ID_Account='%s' AND expiracion > %i AND expiracion >= %i AND expiracion <= %i" % (
-							self.__cuenta.getID(),
-							int(time.time()/60),
-							int(time.time()/60)+rango[0],
-							int(time.time()/60)+rango[1]
-						)
-					)
-				)
-				db_accounts.close()
-				return matches
-			elif tipo_filtro=="val":
-				matches=self.mapCurToTMonedas(
-					db_accounts.execute(
-						"SELECT ID,valor,duracion,creacion,ROUND((creacion/60)+duracion) AS expiracion FROM Monedas WHERE\
-						ID_Account='%s' AND expiracion > %i AND valor >= %i AND valor <= %i" % (
-							self.__cuenta.getID(),
-							int(time.time()/60),
-							rango[0],
-							rango[1]
-						)
-					)
-				)
-				db_accounts.close()
-				return matches
+		#Modificar
+		return []
 
 	def mapCurToTMonedas(self,cursor):
 		return list(
 			map(
-				lambda monedaTupla:TMoneda(
-						ID=monedaTupla[0],
-						valor=monedaTupla[1],
-						duracion=monedaTupla[2],
-						emision=monedaTupla[3]
+				lambda moneda:TMoneda(
+					ID		 =	moneda.id_,
+					valor	 =	moneda.valor,
+					duracion =	moneda.duracion,
+					emision	 =	moneda.emision
 				), 
 				cursor
 			)
