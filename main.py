@@ -13,7 +13,7 @@ try:
 	f.close()
 	print "Actual TBanco cargado"
 except:
-	bank = banco.TBanco("flask_bank")
+	bank = banco.TBanco("flask_bank1")
 	f=open("data/bank.pk","wb")
 	pickle.dump(bank,f)
 	f.close()
