@@ -88,7 +88,6 @@ def login():
 def profile(page=1):
 	if 'account' in flask.session:
 		cuenta=bank.obtenerCuenta(flask.session['account'],flask.session['password'])
-		cuenta['cuenta'].actualizarSaldo()
 		monedas=banco.paginarMonedas(cuenta["cuenta"],page)
 		if monedas['error']:
 			return flask.render_template("cuenta.html",cuenta=True,monedas=monedas)
@@ -209,6 +208,11 @@ def redirect(msg):
 	emit("mensajeServer", 
 			{"color":chatColors[flask.session.get('account','user')],"time":banco.tools.localtime(),
 			"user":flask.session.get('account','user'),"msg":msg}, broadcast=True)
+
+#Poker
+
+
+
 
 if __name__=="__main__":
 	csrf.init_app(app)

@@ -1,55 +1,26 @@
 import time, pickle, base64, threading, os
-from peewee import SqliteDatabase, Model, TextField, CharField, IntegerField, BooleanField, ForeignKeyField
+from pymongo import MongoClient
 from functools import reduce
 import tools.tools as tools
 
-#Los modelos o Schemas de mi DB
-class ObjectField(TextField):
-	def python_value(self,value):
-		return pickle.loads(base64.b64decode(value).encode())
+def EncodeObject(obj):
+	return base64.b64encode(pickle.dumps(obj)).decode()
 
-	def db_value(self,value):
-		return base64.b64encode(pickle.dumps(value)).decode()
+def DecodeObject(data):
+	return pickle.loads(base64.b64decode(data.encode()))
 
-db=SqliteDatabase("data/db/"+os.environ.get('FLASK_BANK_DATABASE','flask_bank')+".db")
-
-class BaseModel(Model):
-	class Meta:
-		database = db
-
-class Account(BaseModel):
-	id_			 =	CharField(8)
-	password	 =	CharField()
-	account_data =	ObjectField()
-	permisos	 =	BooleanField(default=False)
-	saldo		 =	IntegerField(default=0)
-	nmonedas	 =	IntegerField(default=0)
-
-class Moneda(BaseModel):
-	id_			=	CharField(13)
-	valor		=	IntegerField()
-	duracion	=	IntegerField()
-	emision		=	IntegerField()
-	id_account	=	ForeignKeyField(Account,to_field=Account.id_,related_name='monedas')
-
-#El modelo del banco
 class TBanco:
 	def __init__(self,db_name):
 		self.__clave_secreta=tools.randomString(16)
 		self.__db_name=db_name
-		global db
-		db.connect()
-		db.create_table(Account,safe=True)
-		db.create_table(Moneda,safe=True)
 
 	def getClaveSecreta(self):
 		return self.__clave_secreta
 
 	#Funciones para el usuario, basicas
 	def crearCuenta(self,clave):
-		global db
-		db=SqliteDatabase("data/db/"+self.__db_name+".db")
-		db.connect()
+		conn = MongoClient('127.0.0.1',27017)
+		db=conn.get_database(self.__db_name)
 		if clave==self.__clave_secreta:
 			#Si su clave es igual a la clave del banco le damos permisos a esa cuenta
 			cuenta=TCuentaAdmin(clave,tools.randomString(8))
@@ -57,7 +28,7 @@ class TBanco:
 			#... y le agregamos 150 monedas con valores aleatorios dentro de un rango algo alto
 			def agregarMonedas():
 				for _ in xrange(75):
-					cuenta.agregarMoneda(TMoneda([100,1000,10000][tools.random.randint(0,2)],tools.random.randint(720,2160)))
+					cuenta.agregarMoneda(TMoneda([100,1000,10000][tools.random.randint(1,2)],tools.random.randint(720,2160)))
 					cuenta.agregarMoneda(TMoneda([1,10][tools.random.randint(0,1)],tools.random.randint(1600,16000)))
 		else:
 			#Si su clave no es la del banco, creamos una cuenta normal (sin permisos)
@@ -68,36 +39,38 @@ class TBanco:
 				for _ in xrange(20):
 					cuenta.agregarMoneda(TMoneda(100,1440))
 		#Creamos un registro con la cuenta que acabamos de crear
-		registro=Account(id_=cuenta.getID(),account_data=cuenta,password=clave,permisos=cuenta.permisos())
-		registro.save()
+		db.accounts.insert({
+			"id_"			:	cuenta.getID(),
+			"account_data"	:	EncodeObject(cuenta),
+			"password"		:	clave,
+			"permisos"		:	cuenta.permisos()
+		})
 		#Cerramos los flujos de datos o conexiones con la base de datos y retornamos el ID de la cuenta
+		conn.close()
 		threading.Thread(target=agregarMonedas).start()
 		return cuenta.getID()
 
 	def obtenerCuenta(self,ID,clave="_",admin=None):
-		global db
-		db=SqliteDatabase("data/db/"+self.__db_name+".db")
-		db.connect()
-		cursor=Account.select(Account.id_,Account.password).where(Account.id_ == ID)
+		conn = MongoClient('127.0.0.1',27017)
+		db=conn.get_database(self.__db_name)
+		cursor=db.accounts.find({'id_' : ID},{'password':1,'account_data':1})
 		if cursor.count():
-			password=next(cursor.__iter__()).password
+			match = cursor.next()
+			conn.close()
+			password = match['password']
 			if password==clave:
-				cuenta=next(Account.select(Account.account_data,Account.id_).where(Account.id_ == ID).__iter__()).account_data
-				cuenta.actualizarSaldo()
-				info = next(Account.select(Account.saldo,Account.nmonedas).where(Account.id_ == ID).__iter__())
+				cuenta=DecodeObject(match['account_data'])
 				return {
 					"cuenta":cuenta,
-					"saldo":info.saldo,
-					"monedas":info.nmonedas
+					"saldo":cuenta.getSaldo('valor'),
+					"monedas":len(cuenta.getSaldo('monedas'))
 				}
 			elif admin and admin.permisos():
-				cuenta=next(Account.select(Account.account_data).where(Account.id_ == ID).__iter__()).account_data
-				cuenta.actualizarSaldo()
-				info = next(Account.select(Account.saldo,Account.nmonedas).where(Account.id_ == ID).__iter__())
+				cuenta=DecodeObject(match['account_data'])
 				return {
 					"cuenta":cuenta,
-					"saldo":info.saldo,
-					"monedas":info.nmonedas
+					"saldo":cuenta.getSaldo('valor'),
+					"monedas":len(cuenta.getSaldo('monedas'))
 				}
 			else:
 				return False
@@ -105,25 +78,26 @@ class TBanco:
 			return None
 
 	def obtenerCuentas(self,admin,page=1,pagesize=20):
-		global db
-		db=SqliteDatabase("data/db/"+self.__db_name+".db")
-		db.connect()
 		#Verificamos que la cuenta que quiere acceder a esta informacion tenga permisos
 		if admin.permisos():
 			if page<=0:
 				return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
-			cursor=Account.select(Account.id_,Account.password,Account.saldo,Account.nmonedas).offset(pagesize*(page-1))
+			conn = MongoClient('127.0.0.1',27017)
+			db=conn.get_database(self.__db_name)
+			cursor = db.accounts.find().skip((page-1)*pagesize)
 			if not(cursor.count()):
+				conn.close()
 				return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
-			cuentas=[cuenta.__dict__['_data'] for cuenta in cursor.peek(pagesize)]
+			cuentas=[cuenta for cuenta in cursor.limit(pagesize)]
 			last_page=False
 			if len(cuentas)<pagesize or cursor.count()==pagesize:
 				last_page=True
+			conn.close()
 			return {
-				"error":False,
-				"cuentas":cuentas,
-				"page":page,
-				"last_page":last_page
+				"error"		:	False,
+				"cuentas"	:	cuentas,
+				"page"		:	page,
+				"last_page"	:	last_page
 			}
 		else:
 			return {"error":True,"error_message":"Permiso denegado"}
@@ -136,102 +110,45 @@ class Monedero:
 
 	def __call__(self,a_funcion):
 		def actualizarMonedas():
-			global db
-			db=SqliteDatabase("data/db/"+self.__db_name+".db")
-			db.connect()
-			self.__cuenta.saldo_valor=sum(
-				[
-					moneda.valor for moneda in Moneda.select(Moneda,Account).join(Account).where(
-						(Account.id_ == self.__cuenta.getID()) & (Moneda.emision+(Moneda.duracion*60)>time.time())
-					)
-				]
-			)
-			monedas = Moneda.select().join(Account).where(
-				(Account.id_ == self.__cuenta.getID()) & (Moneda.emision+(Moneda.duracion*60)>time.time())
-			)
-			self.__cuenta.saldo_monedas=self.mapCurToTMonedas(monedas)
+			conn = MongoClient('127.0.0.1',27017)
+			db=conn.get_database(self.__db_name)
+			monedas = list(filter(lambda x : (x['emision']+(x['duracion']*60)>time.time()),db.monedas.find({
+				'id_account':self.__cuenta.getID()
+			})))
+			self.__cuenta.saldo_valor=sum([moneda['valor'] for moneda in monedas])
+			self.__cuenta.saldo_monedas=[DecodeObject(moneda['moneda_data']) for moneda in monedas]
 			r=a_funcion()
 			del self.__cuenta.saldo_monedas
 			del self.__cuenta.saldo_valor
 			if self.__cuenta.cambio["cambio"]:
 				if self.__cuenta.cambio["tipo"]=="nueva_moneda":
-					moneda = Moneda(
-						id_			=	self.__cuenta.cambio['moneda']['ID'],
-						valor		=	self.__cuenta.cambio['moneda']['valor'],
-						emision		=	self.__cuenta.cambio['moneda']['emision'],
-						duracion	=	self.__cuenta.cambio['moneda']['duracion'],
-						id_account	=	self.__cuenta.getID()
-					)
-					moneda.save()
+					db.monedas.insert({
+						'id_'		  :	self.__cuenta.cambio["moneda"].getID(),
+						'id_account'  :	self.__cuenta.getID(),
+						'moneda_data' :	EncodeObject(self.__cuenta.cambio["moneda"]),
+						'emision'	  : self.__cuenta.cambio["moneda"].__json__()['emision'],
+						'duracion'	  : self.__cuenta.cambio["moneda"].__json__()['duracion'],
+						'valor'		  : self.__cuenta.cambio["moneda"].consultarValor()
+					})
 				elif self.__cuenta.cambio["tipo"]=="transferencia":
-					moneda = next(Moneda.select(Moneda.id_,Moneda.id_account).where(
-						Moneda.id_ == self.__cuenta.cambio['id_moneda']
-						).__iter__()
-					)
-					moneda.id_account = self.__cuenta.cambio['cuenta']
-					moneda.save()
+					db.monedas.update({'id_':self.__cuenta.cambio["id_moneda"]},{'$set':{'id_account':self.__cuenta.getID()}})
 				elif self.__cuenta.cambio["tipo"]=="nueva_password":
-					cuenta = next(Account.select(Account.id_,Account.password).where(
-						Account.id_ == self.__cuenta.getID()
-						).__iter__()
-					)
-					cuenta.password = self.__cuenta.cambio['nueva_password']
-					cuenta.save()
+					db.accounts.update({'id_':self.__cuenta.getID()},{'$set':{'password':self.__cuenta.cambio["password"]}})
 			del self.__cuenta.cambio
+			conn.close()
 			return r
 		return actualizarMonedas
-
-	def actualizador(self,a_funcion):
-		def actualizar():
-			a_funcion()
-			global db
-			db=SqliteDatabase("data/db/"+self.__db_name+".db")
-			db.connect()
-			cuenta = next(Account.select().where(Account.id_ == self.__cuenta.getID()).__iter__())
-			cuenta.nmonedas = Moneda.select(Moneda,Account).join(Account).where(
-				(Account.id_ == self.__cuenta.getID()) & (Moneda.emision+(Moneda.duracion*60)>time.time())
-			).count()
-			cuenta.saldo = sum(
-				[
-					moneda.valor for moneda in Moneda.select(
-						Moneda.valor,Moneda.emision,Moneda.duracion,Account.id_
-					).join(Account).where(
-						Account.id_ == self.__cuenta.getID() & Moneda.emision+(Moneda.duracion*60)>time.time()
-					)
-				]
-			)
-			cuenta.save()
-		return actualizar
-
+	
 	def obtenerMonedasEnRango(self,rango,tipo_filtro):		
 		#Modificar
 		return []
 
-	def mapCurToTMonedas(self,cursor):
-		return list(
-			map(
-				lambda moneda:TMoneda(
-					ID		 =	moneda.id_,
-					valor	 =	moneda.valor,
-					duracion =	moneda.duracion,
-					emision	 =	moneda.emision
-				), 
-				cursor
-			)
-		)
-
 class TMoneda:
-	def __init__(self,valor,duracion,emision=None,ID=None):
-		if emision and ID:
-			self.__id=ID
-			self.__emision=emision
-			self.__duracion=duracion
-			self.__valor=valor
-		else:
-			self.__id=tools.randomString(13)
-			self.__emision=time.time()
-			self.__duracion=duracion
-			self.__valor=valor
+	def __init__(self,valor,duracion):
+		self.__id=tools.randomString(13)
+		self.__emision=time.time()
+		self.__duracion=duracion
+		self.__valor=valor
 		if not((self.__valor in [1,10,100,1000,10000]) and (self.__duracion>=10 and self.__duracion<=16000)):
 			raise Exception("Datos de la moneda invalidos")
 
@@ -293,22 +210,10 @@ class TCuenta:
 
 	def agregarMoneda(self,moneda):
 		@self.__monedero
-		def f(moneda=moneda):
-			if moneda.consultarValor()>0 and moneda.consultarExpiracion()>0:
-				self.cambio={"cambio":True,"tipo":"nueva_moneda","moneda":moneda.__json__()}
-				return True
-			else:
-				self.cambio={"cambio":False}
-				return False
+		def f():
+			self.cambio={"cambio":True,"tipo":"nueva_moneda","moneda":moneda}
 		return f()
 
-	#Deberia renombrarla a 'actualizarCuenta'
-	def actualizarSaldo(self):
-		@self.__monedero.actualizador
-		def actualizar():
-			pass
-		threading.Thread(target=actualizar).start()
-	
 	#--rango = tupla (int limite_inferior,int limite_superior) - (si el limite_inferior es mayor que el limite_superior entonces
 	#se retornaran todas las monedas que no esten dentro del rango (limite_superior,limite_inferior))
 	#--tipo_filtro = string 'exp' (por expiracion), 'val' (por valor)
