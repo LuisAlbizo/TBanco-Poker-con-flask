@@ -28,8 +28,8 @@ class TBanco:
 			#... y le agregamos 150 monedas con valores aleatorios dentro de un rango algo alto
 			def agregarMonedas():
 				for _ in xrange(75):
-					cuenta.agregarMoneda(TMoneda([100,1000,10000][tools.random.randint(1,2)],tools.random.randint(720,2160)))
-					cuenta.agregarMoneda(TMoneda([1,10][tools.random.randint(0,1)],tools.random.randint(1600,16000)))
+					cuenta.agregarMoneda(TMoneda(tools.random.choice([100,1000,10000]),tools.random.randint(720,2160)))
+					cuenta.agregarMoneda(TMoneda(tools.random.choice([1,10]),tools.random.randint(2880,16000)))
 		else:
 			#Si su clave no es la del banco, creamos una cuenta normal (sin permisos)
 			cuenta=TCuenta(clave,tools.randomString(8))
@@ -84,11 +84,13 @@ class TBanco:
 				return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
 			conn = MongoClient('127.0.0.1',27017)
 			db=conn.get_database(self.__db_name)
-			cursor = db.accounts.find().skip((page-1)*pagesize)
+			cursor = db.accounts.find({},{'account_data':1})
+			npages=cursor.count()/pagesize
+			cursor=cursor.skip((page-1)*pagesize)
 			if not(cursor.count()):
 				conn.close()
 				return {"error":True,"error_message":"Pagina "+str(page)+" fuera de rango"}
-			cuentas=[cuenta for cuenta in cursor.limit(pagesize)]
+			cuentas=[DecodeObject(cuenta['account_data']).__json__() for cuenta in cursor.limit(pagesize)]
 			last_page=False
 			if len(cuentas)<pagesize or cursor.count()==pagesize:
 				last_page=True
@@ -97,7 +99,8 @@ class TBanco:
 				"error"		:	False,
 				"cuentas"	:	cuentas,
 				"page"		:	page,
-				"last_page"	:	last_page
+				"last_page"	:	last_page,
+				"npages"	:	npages
 			}
 		else:
 			return {"error":True,"error_message":"Permiso denegado"}
@@ -115,8 +118,9 @@ class Monedero:
 			monedas = list(filter(lambda x : (x['emision']+(x['duracion']*60)>time.time()),db.monedas.find({
 				'id_account':self.__cuenta.getID()
 			})))
-			self.__cuenta.saldo_valor=sum([moneda['valor'] for moneda in monedas])
-			self.__cuenta.saldo_monedas=[DecodeObject(moneda['moneda_data']) for moneda in monedas]
+			#monedas = list(db.monedas.find({'id_account':self.__cuenta.getID()}))
+			self.__cuenta.saldo_valor=sum([moneda[u'valor'] for moneda in monedas])
+			self.__cuenta.saldo_monedas=[DecodeObject(moneda[u'moneda_data']) for moneda in monedas]
 			r=a_funcion()
 			del self.__cuenta.saldo_monedas
 			del self.__cuenta.saldo_valor
@@ -166,12 +170,12 @@ class TMoneda:
 
 	def __json__(self):
 		return {
-			"ID":self.getID(),
-			"valor":self.consultarValor(),
-			"expiracion":self.consultarExpiracion(),
-			"tiempo_activa":self.tiempoActiva(),
-			"emision":self.__emision,
-			"duracion":self.__duracion
+			"ID"			:	self.getID(),
+			"valor"			:	self.consultarValor(),
+			"expiracion"	:	self.consultarExpiracion(),
+			"tiempo_activa"	:	self.tiempoActiva(),
+			"emision"		:	self.__emision,
+			"duracion"		:	self.__duracion
 		}
 
 class TCuenta:
@@ -268,9 +272,10 @@ class TCuenta:
 
 	def __json__(self):
 		return {
-			"ID":self.getID(),
-			"saldo_valor":self.getSaldo("valor"),
-			"saldo_monedas":[moneda.__json__() for moneda in self.getSaldo("monedas")]
+			"ID"			:	self.getID(),
+			"saldo_valor"	:	self.getSaldo("valor"),
+			"saldo_monedas"	:	[moneda.__json__() for moneda in self.getSaldo("monedas")],
+			"permisos"		:	self.permisos()
 		}
 
 class TCuentaAdmin(TCuenta):

@@ -11,12 +11,96 @@
 {% block content %}
 	{% if cuentas["error"] %}
 	<header class="container">
+		<div class="row">
+			<nav class="col-xs-12 navbar navbar-default navbar-fixed-top">
+				<div class="container-fluid">
+					<div class="navbar-header">
+						<button class="navbar-toggle collapsed" data-toggle="collapse" data-target="#menu-header">
+							<span class="sr-only">Menu</span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+						</button>
+
+						<span class="navbar-brand">
+							<span class="glyphicon glyphicon-user"></span> Lista de Cuentas
+						</span>
+					</div>
+
+					<div class="collapse navbar-collapsed" id="menu-header">
+						<ul class="navbar navbar-nav">
+							<li><a id="logout" href="/mi_cuenta">
+								<span class="glyphicon glyphicon-user"></span> Mi cuenta
+							</a></li>
+							<li><a id="logout" href="/admin">
+								<span class="glyphicon glyphicon-user"></span> Menu de administrador
+							</a></li>
+							<li><a id="logout" href="/logout">
+								<span class="glyphicon glyphicon-log-out"></span> Salir de mi cuenta
+							</a></li>
+							<li><a href="/chat">
+								<span class="glyphicon glyphicon-inbox"></span> Entrar al chat
+							</a></li>
+							<li><a href="/monedas">
+								<span class="glyphicon glyphicon-btc"></span> Obtener Monedas
+							</a></li>
+							<li><a id="home" href="/">
+								<span class="glyphicon glyphicon-home"></span> Pagina principal
+							</a></li>
+						</ul>
+					</div>
+				</div>
+			</nav>
+		</div>
+		
 		<div class="bg-danger">
 			<h2>Error: <small>{{ cuentas["error_message"] }}</small></h2>
 		</div>
 	</header>
 	{% else %}
 	<header class="container">
+		<div class="row">
+			<nav class="col-xs-12 navbar navbar-default navbar-fixed-top">
+				<div class="container-fluid">
+					<div class="navbar-header">
+						<button class="navbar-toggle collapsed" data-toggle="collapse" data-target="#menu-header">
+							<span class="sr-only">Menu</span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+						</button>
+
+						<span class="navbar-brand">
+							<span class="glyphicon glyphicon-user"></span> Lista de Cuentas
+						</span>
+					</div>
+
+					<div class="collapse navbar-collapsed" id="menu-header">
+						<ul class="navbar navbar-nav">
+							<li><a id="logout" href="/mi_cuenta">
+								<span class="glyphicon glyphicon-user"></span> Mi cuenta
+							</a></li>
+							<li><a id="logout" href="/admin">
+								<span class="glyphicon glyphicon-user"></span> Menu de administrador
+							</a></li>
+							<li><a id="logout" href="/logout">
+								<span class="glyphicon glyphicon-log-out"></span> Salir de mi cuenta
+							</a></li>
+							<li><a href="/chat">
+								<span class="glyphicon glyphicon-inbox"></span> Entrar al chat
+							</a></li>
+							<li><a href="/monedas">
+								<span class="glyphicon glyphicon-btc"></span> Obtener Monedas
+							</a></li>
+							<li><a id="home" href="/">
+								<span class="glyphicon glyphicon-home"></span> Pagina principal
+							</a></li>
+						</ul>
+					</div>
+				</div>
+			</nav>
+		</div>
+	
 		<h1>Informacion de todas las cuentas registradas</h1>
 	</header>
 
@@ -25,11 +109,11 @@
 			<table class="table table-bordered table-hover">
 				<thead>
 					<tr class="info">
-						<th colspan="4">Lista de cuentas. Pagina {{ cuentas["page"] }}</th>
+						<th colspan="4">Lista de cuentas.</th>
 					</tr>
 					<tr class="info">
 						<th>ID</th>
-						<th>Password</th>
+						<th>Permisos</th>
 						<th>Saldo</th>
 						<th>Monedas</th>
 					</tr>
@@ -37,15 +121,35 @@
 				<tbody>
 				{% for cuenta in cuentas["cuentas"] %}
 					<tr>
-						<td><a href="/admin/cuenta/{{ cuenta["id"] }}"> {{ cuenta["id"] }} </a></td>
-						<td> {{ cuenta["password"] }} </td>
-						<td> {{ cuenta["saldo"] }} </td>
-						<td> {{ cuenta["monedas"] }} </td>
+						<td><a href="/admin/cuenta/{{ cuenta["ID"] }}"> {{ cuenta["ID"] }} </a></td>
+						<td> {{ cuenta["permisos"] }} </td>
+						<td> {{ cuenta["saldo_valor"] }} </td>
+						<td> {{ cuenta["saldo_monedas"].__len__() }} </td>
 					</tr>
 				{% endfor %}
 				</tbody>
 			</table>
 		<article>
 	</section>
+	
+	<footer class="container">
+		<div class="btn-group btn-group-justified">
+			{% if cuentas["page"]==1 %}
+			<a class="btn btn-primary disabled">
+			{% else %}
+			<a class="btn btn-primary" href="/admin/cuentas/{{ cuentas["page"]-1 }}">
+			{% endif %}
+				<span class="glyphicon glyphicon-chevron-left"></span> Anterior
+			</a>
+			<a class="btn btn-default disabled text-center">{{ cuentas["page"] }} / {{ cuentas["npages"] }}</a>
+			{% if last_page %}
+			<a class="btn btn-primary disabled">
+			{% else %}
+			<a class="btn btn-primary" href="/admin/cuentas/{{ cuentas["page"]+1 }}">
+			{% endif %}
+				Siguiente <span class="glyphicon glyphicon-chevron-right"></span>
+			</a>
+		</div>
+	</footer>
 	{% endif %}
 {% endblock %}

@@ -21,7 +21,9 @@ except:
 	f.write(bank.getClaveSecreta())
 	f.close()
 	print "Nuevo TBanco creado"
-print "La clave secreta del TBanco es: "+bank.getClaveSecreta()
+finally:
+	del f
+	print "La clave secreta del TBanco es: "+bank.getClaveSecreta()
 
 app = flask.Flask(__name__)
 app.config.from_object(config.MiConfig)
@@ -206,8 +208,12 @@ def setColor():
 @socketio.on("mensajeClient",namespace="/chat")
 def redirect(msg):
 	emit("mensajeServer", 
-			{"color":chatColors[flask.session.get('account','user')],"time":banco.tools.localtime(),
-			"user":flask.session.get('account','user'),"msg":msg}, broadcast=True)
+			{
+				"color"	:	chatColors[flask.session.get('account','user')],
+				"time"	:	banco.tools.localtime(),
+				"user"	:	flask.session.get('account','user'),
+				"msg"	:	msg
+			}, broadcast=True)
 
 #Poker
 
