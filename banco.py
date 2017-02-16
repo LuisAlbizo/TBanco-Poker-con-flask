@@ -85,7 +85,7 @@ class TBanco:
 			conn = MongoClient('127.0.0.1',27017)
 			db=conn.get_database(self.__db_name)
 			cursor = db.accounts.find({},{'account_data':1})
-			npages=cursor.count()/pagesize
+			npages=(lambda a,b:(a/b)+1 if a%b else (a/b))(cursor.count(),pagesize)
 			cursor=cursor.skip((page-1)*pagesize)
 			if not(cursor.count()):
 				conn.close()

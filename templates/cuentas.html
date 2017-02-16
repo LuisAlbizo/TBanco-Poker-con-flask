@@ -4,6 +4,7 @@
 	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1,0">
 	<link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css" />
 	<link rel="stylesheet" href="/static/css/cuentas.css" />
+	<link rel="stylesheet" href="/static/bootstrap/js/bootstrap.min.js" />
 	<script src="/static/js/jquery.js"></script>
 	<title>Lista de cuentas registradas</title>
 {% endblock %}
@@ -142,7 +143,7 @@
 				<span class="glyphicon glyphicon-chevron-left"></span> Anterior
 			</a>
 			<a class="btn btn-default disabled text-center">{{ cuentas["page"] }} / {{ cuentas["npages"] }}</a>
-			{% if last_page %}
+			{% if cuentas["last_page"] %}
 			<a class="btn btn-primary disabled">
 			{% else %}
 			<a class="btn btn-primary" href="/admin/cuentas/{{ cuentas["page"]+1 }}">

@@ -8,22 +8,12 @@ import pickle
 from flask_socketio import SocketIO, emit
 
 try:
-	f=open("data/bank.pk","rb")
-	bank = pickle.load(f)
-	f.close()
-	print "Actual TBanco cargado"
+	f = open("data/bank.pk","rb"); bank = pickle.load(f); f.close(); print "Actual TBanco cargado"
 except:
-	bank = banco.TBanco("flask_bank1")
-	f=open("data/bank.pk","wb")
-	pickle.dump(bank,f)
-	f.close()
-	f=open("data/bank_key.txt","wb")
-	f.write(bank.getClaveSecreta())
-	f.close()
-	print "Nuevo TBanco creado"
+	bank = banco.TBanco("flask_bank1"); f = open("data/bank.pk","wb"); pickle.dump(bank,f); f.close()
+	f = open("data/bank_key.txt","wb"); f.write(bank.getClaveSecreta()); f.close(); print "Nuevo TBanco creado"
 finally:
-	del f
-	print "La clave secreta del TBanco es: "+bank.getClaveSecreta()
+	del f; print "La clave secreta del TBanco es: "+bank.getClaveSecreta()
 
 app = flask.Flask(__name__)
 app.config.from_object(config.MiConfig)
@@ -157,7 +147,6 @@ def informacion_cuenta(cuenta_id,page=1):
 		if cuenta.permisos():
 			cuenta = bank.obtenerCuenta(cuenta_id,admin=cuenta)
 			if cuenta: 
-				cuenta['cuenta'].actualizarSaldo()
 				monedas=banco.paginarMonedas(cuenta["cuenta"],page)
 				if monedas['error']:
 					return flask.render_template("cuenta.html",cuenta=True,monedas=monedas)
@@ -177,8 +166,8 @@ def informacion_cuenta(cuenta_id,page=1):
 	else:
 		return flask.redirect(flask.url_for('login'))
 
-@app.route("/admin/cuentas")
-@app.route("/admin/cuentas/<int:page>")
+@app.route("/admin/cuentas/")
+@app.route("/admin/cuentas/<int:page>/")
 def informacion_cuentas(page=1):
 	if 'account' in flask.session:
 		cuenta = bank.obtenerCuenta(flask.session['account'],flask.session['password'])["cuenta"]
@@ -216,6 +205,8 @@ def redirect(msg):
 			}, broadcast=True)
 
 #Poker
+f = open('./data/cartas.pk','rb'); cartas = pickle.load(f); f.close()
+
 
 
 
