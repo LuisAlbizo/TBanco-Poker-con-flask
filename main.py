@@ -205,7 +205,6 @@ def redirect(msg):
 			}, broadcast=True)
 
 #Poker
-f = open('./data/cartas.pk','rb'); cartas = pickle.load(f); f.close()
 
 
 

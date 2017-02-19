@@ -1,4 +1,4 @@
-import time, pickle, base64, threading, os
+import time, pickle, base64, hashlib, threading, os
 from pymongo import MongoClient
 from functools import reduce
 import tools.tools as tools
@@ -42,7 +42,7 @@ class TBanco:
 		db.accounts.insert({
 			"id_"			:	cuenta.getID(),
 			"account_data"	:	EncodeObject(cuenta),
-			"password"		:	clave,
+			"password"		:	hashlib.sha224(clave).hexdigest(),
 			"permisos"		:	cuenta.permisos()
 		})
 		#Cerramos los flujos de datos o conexiones con la base de datos y retornamos el ID de la cuenta
@@ -57,8 +57,7 @@ class TBanco:
 		if cursor.count():
 			match = cursor.next()
 			conn.close()
-			password = match['password']
-			if password==clave:
+			if match['password']==hashlib.sha224(clave).hexdigest():
 				cuenta=DecodeObject(match['account_data'])
 				return {
 					"cuenta":cuenta,
@@ -137,7 +136,12 @@ class Monedero:
 				elif self.__cuenta.cambio["tipo"]=="transferencia":
 					db.monedas.update({'id_':self.__cuenta.cambio["id_moneda"]},{'$set':{'id_account':self.__cuenta.getID()}})
 				elif self.__cuenta.cambio["tipo"]=="nueva_password":
-					db.accounts.update({'id_':self.__cuenta.getID()},{'$set':{'password':self.__cuenta.cambio["password"]}})
+					db.accounts.update(
+						{ 'id_' : self.__cuenta.getID() },
+						{ '$set':
+							{ 'password' : hashlib.sha224(self.__cuenta.cambio["password"]).hexdigest() }
+						}
+					)
 			del self.__cuenta.cambio
 			conn.close()
 			return r
